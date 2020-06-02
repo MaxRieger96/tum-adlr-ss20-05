@@ -1,47 +1,66 @@
-from enum import Enum
+from __future__ import annotations
+
 from typing import List
+from typing import Set
+from typing import TYPE_CHECKING
 
-from src.elevator_rl.house import PassengerRequest
+import numpy as np
 
+from elevator_rl.passenger import Passenger
 
-class ElevatorActionEnum(Enum):
-    DOWN = -1
-    STAY = 0  # TODO: Check if we instead want to have actions such as open/close door
-    UP = 1
+if TYPE_CHECKING:
+    from elevator_rl.house import House
 
-    @staticmethod
-    def count() -> int:
-        return len([d for d in ElevatorActionEnum])
+MOVE_TIME = 2.0  # TODO find a good time values
+ENTER_TIME = 1.0
+DOOR_OPEN_TIME = 1.0
+IDLE_TIME = 10.0  # TODO decide if we want to have the option to idle
 
 
 class Elevator:
     def __init__(
         self,
-        elevator_capacity: int,
+        capacity: int,
         floor: int,
-        passengers: int,
-        floor_requests: List[int],
+        passengers: Set[Passenger],
+        floor_requests: np.ndarray,
+        house: "House",
     ):
-        self.elevator_capacity = elevator_capacity
-        self.floor = floor
-        self.passengers = (
-            passengers  # TODO: not sure if it is reasonable to assume that we know this
-        )
-        self.floor_requests = floor_requests
+        self.capacity: int = capacity
+        self.floor: int = floor
+        assert len(passengers) <= capacity
+        self.passengers: Set[Passenger] = passengers
+        assert floor_requests.dtype == bool
+        self.floor_requests: np.ndarray = floor_requests
+        self.time: float = 0
+        self.house: "House" = house
 
-    def passenger_exchange(self, elevator_requests: List[PassengerRequest]):
-        # TODO: sample passengers that are at this floor and want to get in
-        # TODO sample passengers that are in the elevator and want to get out
-        if self.floor in self.floor_requests:
-            self.passengers -= (
-                1  # For now I assume that we only have one person every time
-            )
-            # TODO issue that floor_requests are not bound to passengers
-            #  --> only know that someone wants to leave
-            self.floor_requests.remove(self.floor)
-        for request in elevator_requests:
-            if request.floor == self.floor:
-                self.passengers += (
-                    1  # For now I assume that we only have one person every time
-                )
-                elevator_requests.remove(request)
+    def free_places(self) -> int:
+        return self.capacity - len(self.passengers)
+
+    def up(self):
+        assert self.floor + 1 < self.house.number_of_floors
+        self.floor += 1
+        self.time += MOVE_TIME
+
+    def down(self):
+        assert self.floor > 0
+        self.floor -= 1
+        self.time += MOVE_TIME
+
+    def passengers_enter_elevator(
+        self, entering_passengers: Set[Passenger], new_floor_requests: List[int],
+    ):
+        assert len(self.passengers) <= self.capacity
+        self.passengers = self.passengers | entering_passengers
+        self.floor_requests[self.floor] = False
+        self.floor_requests[new_floor_requests] = True
+        # TODO set better estimates of time taken for entering and leaving
+        self.time += DOOR_OPEN_TIME + len(entering_passengers) * ENTER_TIME
+
+    def passengers_exit_elevator(self, leaving_passengers: Set[Passenger]):
+        self.passengers = self.passengers - leaving_passengers
+        self.time += DOOR_OPEN_TIME + len(leaving_passengers) * ENTER_TIME
+
+    def idle(self):
+        self.time += IDLE_TIME
