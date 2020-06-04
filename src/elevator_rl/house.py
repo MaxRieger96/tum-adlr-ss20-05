@@ -72,7 +72,8 @@ class House:
         return leaving_passengers
 
     def next_to_move(self) -> int:
-        return int(np.argmin([e.time for e in self.elevators]))
+        # return int(np.argmin([e.time for e in self.elevators]))
+        return min(range(len(self.elevators)), key=lambda x: self.elevators[x].time)
 
     def get_expected_passenger_count(self, current_time: float) -> float:
         result = sum([len(e.passengers) for e in self.elevators])

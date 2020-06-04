@@ -1,10 +1,9 @@
 from enum import Enum
 from typing import List
 
-from src.elevator_rl.house import House
-
 from elevator_rl.elevator_env_render import render
 from elevator_rl.example_houses import get_10_story_house
+from elevator_rl.house import House
 
 
 class ElevatorActionEnum(Enum):
@@ -92,13 +91,16 @@ def main():
     house = get_10_story_house()
 
     env = ElevatorEnv(house)
+    for _ in range(100):
+        for _ in range(9):
+            for _ in range(4):
+                action = ElevatorEnvAction(env.next_elevator, ElevatorActionEnum.UP)
+                env.step(action)
+        for _ in range(9):
+            for _ in range(4):
+                action = ElevatorEnvAction(env.next_elevator, ElevatorActionEnum.DOWN)
+                env.step(action)
 
-    for _ in range(5):
-        for _ in range(4):
-            action = ElevatorEnvAction(env.next_elevator, ElevatorActionEnum.UP)
-            env.step(action)
-
-        env.render()
     print(house)
 
 

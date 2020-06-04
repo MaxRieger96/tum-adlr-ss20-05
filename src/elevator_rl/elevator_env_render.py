@@ -4,7 +4,8 @@ from typing import List
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.patches import Polygon
-from src.elevator_rl.house import House
+
+from elevator_rl.house import House
 
 # TODO center all texts
 

@@ -285,6 +285,7 @@ class PassengerGenerator:
                 passengers.append(p)
 
             # assign random distributions to remaining passengers
+            # TODO use target probs instead of uniform distribution
             for i in range(len(up_floors), len(up_passengers)):
                 up_distribution = equal_distribution(
                     up_floors, len(self.target_probabilities)
