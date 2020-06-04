@@ -49,6 +49,10 @@ class House:
         self.time: float = 0
 
     def elapse_time_to(self, until_time: float):
+        """
+        lets time of the house pass
+        this generates request signals of passengers appearing at floors
+        """
         # generate signals
         assert until_time >= self.time, "we cannot travel back in time"
         time_delta = until_time - self.time
@@ -56,6 +60,12 @@ class House:
         self.time = until_time
 
     def open_elevator(self, elevator_idx: int) -> Set[Passenger]:
+        """
+        lets people leave the specified elevator, then materializes the passengers at
+        the floor based on the requests and lets enter as many passengers as fit in the
+        elevator
+        :return: leaving_passengers: Set[Passenger]
+        """
         # first people exit the elevator
         assert 0 <= elevator_idx < len(self.elevators)
         elevator = self.elevators[elevator_idx]
@@ -72,10 +82,22 @@ class House:
         return leaving_passengers
 
     def next_to_move(self) -> int:
+        """
+        gives the index of the next elevator, which needs to move
+        this is the elevator with the smallest time value
+
+        :return: index: int
+        """
         # return int(np.argmin([e.time for e in self.elevators]))
         return min(range(len(self.elevators)), key=lambda x: self.elevators[x].time)
 
     def get_expected_passenger_count(self, current_time: float) -> float:
+        """
+        calculates the expected number of passengers waiting at the given time
+        the arrival times for passengers at floors are randomly sampled
+
+        :return: count: float
+        """
         result = sum([len(e.passengers) for e in self.elevators])
         # adding 1 + the expected number of passengers arrived after the first for each
         # request
@@ -96,14 +118,32 @@ class House:
 
         return result
 
-    def get_waiting_time_for_all_waiting_passengers(self) -> List[float]:
-        individual_waiting_times = []
+    def get_arrival_time_for_all_waiting_passengers(self) -> List[float]:
+        """
+        creates a list of arrival times for all passengers which are currently waiting
+        at floors or in elevators
+        the arrival times for passengers at floors are randomly sampled
+
+        :return individual_arrival_times: List[float]
+        """
+        individual_arrival_times = []
         # passengers in elevators
         for e in self.elevators:
             for p in e.passengers:
-                individual_waiting_times.append(self.time - p.waiting_since)
+                individual_arrival_times.append(p.waiting_since)
         # passengers waiting at floors
         for floor, _ in enumerate(self.up_requests):
             times, _, _ = self.passenger_gen.sample_passenger_times(floor, self.time)
-            individual_waiting_times += [self.time - t for t in times]
-        return individual_waiting_times
+            individual_arrival_times += times
+        return individual_arrival_times
+
+    def get_waiting_time_for_all_waiting_passengers(self) -> List[float]:
+        """for all passengers which are currently waiting
+        at floors or in elevators
+        the arrival times for passengers at floors are randomly sampled
+
+        :return individual_waiting_times: List[float]
+        """
+        return [
+            self.time - t for t in self.get_arrival_time_for_all_waiting_passengers()
+        ]

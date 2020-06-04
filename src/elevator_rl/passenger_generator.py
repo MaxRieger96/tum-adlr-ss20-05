@@ -237,13 +237,16 @@ class PassengerGenerator:
             return arrival_times, targets, want_up
 
     def create_passengers(self, elevator: Elevator) -> Tuple[Set[Passenger], List[int]]:
-        # sample passengers which leave and passengers which enter
-        #  1. Calc nr of passengers waiting for each dir iteratively (~Exp)
-        #  2. Decide which passengers enter by capacity, omit others
-        #  3. For each passenger draw target floor
-        #  4. Make set of target floors
-        #  5. Assign probabilities of target floors for passengers
-        #       (100% for one passenger on each floor in set of target floors)
+        """
+        sample passengers which leave given elevator and passengers which enter
+         1. Calc nr of passengers waiting for each dir iteratively (~Exp)
+         2. Decide which passengers enter by capacity, omit others
+         3. For each passenger draw target floor
+         4. Make set of target floors
+         5. Assign probabilities of target floors for passengers
+              (100% for one passenger on each floor in set of target floors)
+        :return: passengers, requests: Tuple[Set[Passenger], List[int]]
+        """
         if (
             not self.house.up_requests[elevator.floor]
             and not self.house.down_requests[elevator.floor]
@@ -305,6 +308,11 @@ class PassengerGenerator:
     def expected_passengers_waiting(
         self, floor: int, waiting_since: float, current_time: float
     ) -> float:
+        """
+        calculate the expected number of passengers appearing at the given floor between
+        waiting_since and current_time
+        :return: expected_nr_waiting: float
+        """
         # assuming the poisson distribution, the expected value is exactly the rate
         time_delta = current_time - waiting_since
         return self.request_rates[floor] * time_delta
