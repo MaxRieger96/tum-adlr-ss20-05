@@ -28,7 +28,10 @@ def main():
             print("valid commands are: {u, d, o,i }")
             continue
 
-        print(env.step(ElevatorEnvAction(env.next_elevator, action)))
+        print(
+            f"reward: {env.step(ElevatorEnvAction(env.next_elevator, action))}\t"
+            f"total waiting time: {env.get_total_waiting_time()}"
+        )
         env.render()
 
 

@@ -53,7 +53,7 @@ class ElevatorEnv:
             leaving_passengers = self.house.open_elevator(env_action.elevator_idx)
             # store waiting time
             self.transported_passenger_times += [
-                p.waiting_since - elevator.time for p in leaving_passengers
+                elevator.time - p.waiting_since for p in leaving_passengers
             ]
         elif env_action.elevator_action == ElevatorActionEnum.IDLE:
             self.house.elevators[env_action.elevator_idx].idle()
@@ -71,6 +71,15 @@ class ElevatorEnv:
 
     def render(self):
         render(self.house)
+
+    def get_total_waiting_time(self) -> float:
+        return sum(self._get_all_waiting_times())
+
+    def _get_all_waiting_times(self) -> List[float]:
+        return (
+            self.transported_passenger_times
+            + self.house.get_waiting_time_for_all_waiting_passengers()
+        )
 
     def _calc_reward(self, start_time: float, until_time: float) -> float:
         # use expected values of counts of passengers to calculate all waiting times

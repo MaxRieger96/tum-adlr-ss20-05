@@ -17,7 +17,7 @@ T2 = TypeVar("T2")
 
 
 def merge_sorted_lists(
-    l1a: List[T1], l1b: List[T1], l2a: List[T2], l2b: List[T2]
+    l1a: List[T1], l1b: List[T2], l2a: List[T1], l2b: List[T2]
 ) -> Tuple[List[T1], List[T2], List[bool]]:
     i = 0
     j = 0
@@ -139,12 +139,12 @@ class PassengerGenerator:
         return target_probabilities / np.sum(target_probabilities)
 
     def _create_up_or_down_passengers(
-        self, elevator: Elevator, exclude_idxs: List[int], waiting_since: float
+        self, floor: int, time: float, exclude_idxs: List[int], waiting_since: float
     ) -> Tuple[np.ndarray, List[int]]:
-        time_delta = elevator.time - waiting_since
+        time_delta = time - waiting_since
         count = 1
         simulated_time = 0
-        rate = self.request_rates[elevator.floor]
+        rate = self.request_rates[floor]
         arrival_times = [0]
 
         while True:
@@ -164,28 +164,30 @@ class PassengerGenerator:
 
         return arrival_times, targets
 
-    def _create_up_passengers(self, elevator: Elevator) -> Tuple[np.ndarray, List[int]]:
-        if self.house.up_requests[elevator.floor]:
+    def _create_up_passengers(
+        self, floor: int, time: float
+    ) -> Tuple[np.ndarray, List[int]]:
+        if self.house.up_requests[floor]:
             not_reachable = [
-                i for i in range(len(self.target_probabilities)) if i <= elevator.floor
+                i for i in range(len(self.target_probabilities)) if i <= floor
             ]
-            waiting_since = self.house.up_requests_waiting_since[elevator.floor]
+            waiting_since = self.house.up_requests_waiting_since[floor]
             return self._create_up_or_down_passengers(
-                elevator, not_reachable, waiting_since
+                floor, time, not_reachable, waiting_since
             )
         else:
             return np.array([]), []
 
     def _create_down_passengers(
-        self, elevator: Elevator
+        self, floor: int, time: float
     ) -> Tuple[np.ndarray, List[int]]:
-        if self.house.down_requests[elevator.floor]:
+        if self.house.down_requests[floor]:
             not_reachable = [
-                i for i in range(len(self.target_probabilities)) if i >= elevator.floor
+                i for i in range(len(self.target_probabilities)) if i >= floor
             ]
-            waiting_since = self.house.down_requests_waiting_since[elevator.floor]
+            waiting_since = self.house.down_requests_waiting_since[floor]
             return self._create_up_or_down_passengers(
-                elevator, not_reachable, waiting_since
+                floor, time, not_reachable, waiting_since
             )
         else:
             return np.array([]), []
@@ -220,6 +222,20 @@ class PassengerGenerator:
 
         return all_up_in, all_down_in
 
+    def sample_passenger_times(
+        self, floor: int, time: float
+    ) -> Tuple[List[float], List[int], List[bool]]:
+        if not self.house.up_requests[floor] and not self.house.down_requests[floor]:
+            return [], [], []
+        else:
+            up_arrival_times, up_targets = self._create_up_passengers(floor, time)
+            down_arrival_times, down_targets = self._create_down_passengers(floor, time)
+            arrival_times, targets, want_up = merge_sorted_lists(
+                up_arrival_times, up_targets, down_arrival_times, down_targets
+            )
+            assert len(arrival_times) == len(targets) == len(want_up)
+            return arrival_times, targets, want_up
+
     def create_passengers(self, elevator: Elevator) -> Tuple[Set[Passenger], List[int]]:
         # sample passengers which leave and passengers which enter
         #  1. Calc nr of passengers waiting for each dir iteratively (~Exp)
@@ -235,12 +251,9 @@ class PassengerGenerator:
             return set(), []
         else:
             # get arrival times for each passenger
-            up_arrival_times, up_targets = self._create_up_passengers(elevator)
-            down_arrival_times, down_targets = self._create_down_passengers(elevator)
-            arrival_times, targets, want_up = merge_sorted_lists(
-                up_arrival_times, up_targets, down_arrival_times, down_targets
+            arrival_times, targets, want_up = self.sample_passenger_times(
+                elevator.floor, elevator.time
             )
-            assert len(arrival_times) == len(targets) == len(want_up)
             n_new_passengers = min(elevator.free_places(), len(arrival_times))
 
             # check if all passengers got in and update request signals

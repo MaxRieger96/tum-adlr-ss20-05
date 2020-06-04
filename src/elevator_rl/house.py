@@ -94,3 +94,15 @@ class House:
                 )
 
         return result
+
+    def get_waiting_time_for_all_waiting_passengers(self) -> List[float]:
+        individual_waiting_times = []
+        # passengers in elevators
+        for e in self.elevators:
+            for p in e.passengers:
+                individual_waiting_times.append(self.time - p.waiting_since)
+        # passengers waiting at floors
+        for floor, _ in enumerate(self.up_requests):
+            times, _, _ = self.passenger_gen.sample_passenger_times(floor, self.time)
+            individual_waiting_times += [self.time - t for t in times]
+        return individual_waiting_times
