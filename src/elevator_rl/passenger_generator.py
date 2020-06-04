@@ -55,9 +55,28 @@ def one_hot(x: int, n: int) -> np.ndarray:
 
 
 def equal_distribution(indices: Set[int], n: int) -> np.ndarray:
+    """
+    create an equal distribution for given indices, probability of zero for others
+    n specifies length of vector
+    :return: probabilities: np.ndarray
+    """
     assert len(indices) > 0
     res = np.zeros(n, dtype=float)
     res[list(indices)] = 1.0
+    return res / np.sum(res)
+
+
+def adapted_categorical_distribution_distribution(
+    original_distribution: np.ndarray, indices: Set[int]
+) -> np.ndarray:
+    """
+    adapt distribution so that only given indices have probability >=0
+    :return: adapted_distribution: np.ndarray
+    """
+    assert len(indices) > 0
+    excluded_indices = {i for i in range(len(original_distribution))} - indices
+    res = original_distribution.copy()
+    res[list(excluded_indices)] = 0
     return res / np.sum(res)
 
 
@@ -288,17 +307,16 @@ class PassengerGenerator:
                 passengers.append(p)
 
             # assign random distributions to remaining passengers
-            # TODO use target probs instead of uniform distribution
             for i in range(len(up_floors), len(up_passengers)):
-                up_distribution = equal_distribution(
-                    up_floors, len(self.target_probabilities)
+                up_distribution = adapted_categorical_distribution_distribution(
+                    self.target_probabilities, up_floors
                 )
                 p = Passenger(up_distribution, arrival_times[up_passengers[i]])
                 passengers.append(p)
 
             for i in range(len(down_floors), len(down_passengers)):
-                down_distribution = equal_distribution(
-                    down_floors, len(self.target_probabilities)
+                down_distribution = adapted_categorical_distribution_distribution(
+                    self.target_probabilities, down_floors
                 )
                 p = Passenger(down_distribution, arrival_times[down_passengers[i]])
                 passengers.append(p)
