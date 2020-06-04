@@ -78,18 +78,18 @@ class House:
         result = sum([len(e.passengers) for e in self.elevators])
         # adding 1 + the expected number of passengers arrived after the first for each
         # request
-        for floor, arrival_time in enumerate(self.up_requests_waiting_since):
-            if self.up_requests[floor]:
+        for floor, request in enumerate(self.up_requests):
+            if request:
                 result += 1 + (
                     self.passenger_gen.expected_passengers_waiting(
-                        floor, arrival_time, current_time
+                        floor, self.up_requests_waiting_since[floor], current_time
                     )
                 )
-        for floor, arrival_time in enumerate(self.down_requests_waiting_since):
-            if self.down_requests[floor]:
+        for floor, request in enumerate(self.down_requests):
+            if request:
                 result += 1 + (
                     self.passenger_gen.expected_passengers_waiting(
-                        floor, arrival_time, current_time
+                        floor, self.down_requests_waiting_since[floor], current_time
                     )
                 )
 
