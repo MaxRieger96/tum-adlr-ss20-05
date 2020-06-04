@@ -48,7 +48,7 @@ class House:
 
         self.time: float = 0
 
-    def elapse_time(self, until_time: float):
+    def elapse_time_to(self, until_time: float):
         # generate signals
         assert until_time >= self.time, "we cannot travel back in time"
         time_delta = until_time - self.time
@@ -72,4 +72,25 @@ class House:
         return leaving_passengers
 
     def next_to_move(self) -> int:
-        return np.argmin([e.time for e in self.elevators])
+        return int(np.argmin([e.time for e in self.elevators]))
+
+    def get_expected_passenger_count(self, current_time: float) -> float:
+        result = sum([len(e.passengers) for e in self.elevators])
+        # adding 1 + the expected number of passengers arrived after the first for each
+        # request
+        for floor, arrival_time in enumerate(self.up_requests_waiting_since):
+            if self.up_requests[floor]:
+                result += 1 + (
+                    self.passenger_gen.expected_passengers_waiting(
+                        floor, arrival_time, current_time
+                    )
+                )
+        for floor, arrival_time in enumerate(self.down_requests_waiting_since):
+            if self.down_requests[floor]:
+                result += 1 + (
+                    self.passenger_gen.expected_passengers_waiting(
+                        floor, arrival_time, current_time
+                    )
+                )
+
+        return result

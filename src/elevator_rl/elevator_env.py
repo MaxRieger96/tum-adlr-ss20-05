@@ -1,4 +1,5 @@
 from enum import Enum
+from typing import List
 
 from src.elevator_rl.house import House
 
@@ -24,11 +25,14 @@ class ElevatorEnvAction:
 
 
 class ElevatorEnv:
+    # TODO env should give rewards and store waiting times for total rewards
+    # TODO there should be observations
     def __init__(self, house: House):
         self.house: House = house
         self.next_elevator: int = 0
+        self.transported_passenger_times: List[float] = []
 
-    def step(self, env_action: ElevatorEnvAction):
+    def step(self, env_action: ElevatorEnvAction) -> float:
         # move only if valid move
         if env_action.elevator_idx not in range(0, len(self.house.elevators)):
             raise ValueError("Elevator-ID does not exist")
@@ -36,24 +40,43 @@ class ElevatorEnv:
             env_action.elevator_idx == self.next_elevator
         ), "elevators should be controlled in the right order"
 
+        start_time = self.house.time
+
+        elevator = self.house.elevators[env_action.elevator_idx]
+
         # perform action
         if env_action.elevator_action == ElevatorActionEnum.DOWN:
-            self.house.elevators[env_action.elevator_idx].down()
+            elevator.down()
         elif env_action.elevator_action == ElevatorActionEnum.UP:
-            self.house.elevators[env_action.elevator_idx].up()
+            elevator.up()
         elif env_action.elevator_action == ElevatorActionEnum.OPEN:
-            self.house.open_elevator(env_action.elevator_idx)
+            leaving_passengers = self.house.open_elevator(env_action.elevator_idx)
+            # store waiting time
+            self.transported_passenger_times += [
+                p.waiting_since - elevator.time for p in leaving_passengers
+            ]
         elif env_action.elevator_action == ElevatorActionEnum.IDLE:
             self.house.elevators[env_action.elevator_idx].idle()
 
         # find elevator which performs action next
         self.next_elevator = self.house.next_to_move()
 
+        # time to elapse to
+        new_time = self.house.elevators[self.next_elevator].time
+
         # run time until action takes place
-        self.house.elapse_time(self.house.elevators[self.next_elevator].time)
+        self.house.elapse_time_to(new_time)
+
+        return self._calc_reward(start_time, new_time)
 
     def render(self):
         render(self.house)
+
+    def _calc_reward(self, start_time: float, until_time: float) -> float:
+        # use expected values of counts of passengers to calculate all waiting times
+        time_delta = until_time - start_time
+        passenger_count = self.house.get_expected_passenger_count(until_time)
+        return -1 * time_delta * passenger_count
 
 
 def main():

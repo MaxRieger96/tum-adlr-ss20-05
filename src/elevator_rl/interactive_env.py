@@ -28,7 +28,7 @@ def main():
             print("valid commands are: {u, d, o,i }")
             continue
 
-        env.step(ElevatorEnvAction(env.next_elevator, action))
+        print(env.step(ElevatorEnvAction(env.next_elevator, action)))
         env.render()
 
 

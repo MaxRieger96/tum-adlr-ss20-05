@@ -174,7 +174,6 @@ class PassengerGenerator:
                 elevator, not_reachable, waiting_since
             )
         else:
-            print("empty up")
             return np.array([]), []
 
     def _create_down_passengers(
@@ -189,7 +188,6 @@ class PassengerGenerator:
                 elevator, not_reachable, waiting_since
             )
         else:
-            print("empty down")
             return np.array([]), []
 
     def _update_up_down_requests(
@@ -289,3 +287,10 @@ class PassengerGenerator:
                 passengers.append(p)
 
             return set(passengers), requests
+
+    def expected_passengers_waiting(
+        self, floor: int, waiting_since: float, current_time: float
+    ) -> float:
+        # assuming the poisson distribution, the expected value is exactly the rate
+        time_delta = current_time - waiting_since
+        return self.request_rates[floor] * time_delta
