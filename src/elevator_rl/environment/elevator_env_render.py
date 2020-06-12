@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.patches import Polygon
 
-from elevator_rl.house import House
+from elevator_rl.environment.house import House
 
 # TODO center all texts
 
@@ -88,7 +88,8 @@ def draw_passenger_request(floor: int, direction: RequestDirection, time: float)
         plt.text(-50, 50 + FLOOR_HEIGHT * floor, f"{time:.1f}")  # TODO better text pos
 
 
-def render(house: House):
+def render(house: House, method: str, step):
+    method = method if method in ["matplotlib", "file"] else "matplotlib"
     width = len(house.elevators) * ELEVATOR_SPACING
     height = house.number_of_floors * FLOOR_HEIGHT
     plt.axes()
@@ -163,5 +164,7 @@ def render(house: House):
                 direction=RequestDirection.DOWN,
                 time=house.down_requests_waiting_since[i],
             )
-
-    plt.show()
+    if method == "matplotlib":
+        plt.show()
+    else:
+        plt.savefig("step_{}.jpg".format(step))

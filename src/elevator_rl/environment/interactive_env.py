@@ -1,7 +1,7 @@
-from elevator_rl.elevator_env import ElevatorActionEnum
-from elevator_rl.elevator_env import ElevatorEnv
-from elevator_rl.elevator_env import ElevatorEnvAction
-from elevator_rl.example_houses import get_simple_house
+from elevator_rl.environment.elevator_env import ElevatorActionEnum
+from elevator_rl.environment.elevator_env import ElevatorEnv
+from elevator_rl.environment.elevator_env import ElevatorEnvAction
+from elevator_rl.environment.example_houses import get_simple_house
 
 
 def main():
@@ -29,10 +29,9 @@ def main():
             continue
 
         obs, reward = env.step(ElevatorEnvAction(env.next_elevator, action))
-        as_vector = obs.as_vector()
+        # as_vector = obs.as_array()
         print(
-            f"reward: {reward}\t"
-            f"total waiting time: {env.get_total_waiting_time()}"
+            f"reward: {reward}\t" f"total waiting time: {env.get_total_waiting_time()}"
         )
         env.render()
 

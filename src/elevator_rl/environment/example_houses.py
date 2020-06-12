@@ -1,6 +1,6 @@
 import numpy as np
 
-from elevator_rl.house import House
+from elevator_rl.environment.house import House
 
 
 def get_10_story_house() -> House:

@@ -3,9 +3,9 @@ from typing import Set
 
 import numpy as np
 
-from elevator_rl.elevator import Elevator
-from elevator_rl.passenger import Passenger
-from elevator_rl.passenger_generator import PassengerGenerator
+from elevator_rl.environment.elevator import Elevator
+from elevator_rl.environment.passenger import Passenger
+from elevator_rl.environment.passenger_generator import PassengerGenerator
 
 
 class House:

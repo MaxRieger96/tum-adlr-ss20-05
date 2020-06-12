@@ -1,20 +1,38 @@
 from __future__ import annotations
 
+from enum import Enum
 from typing import List
 from typing import Set
 from typing import TYPE_CHECKING
 
 import numpy as np
 
-from elevator_rl.passenger import Passenger
+from elevator_rl.environment.passenger import Passenger
 
 if TYPE_CHECKING:
-    from elevator_rl.house import House
+    from elevator_rl.environment.house import House
 
 MOVE_TIME = 2.0  # TODO find a good time values
 ENTER_TIME = 1.0
 DOOR_OPEN_TIME = 1.0
 IDLE_TIME = 10.0  # TODO decide if we want to have the option to idle
+
+
+class ElevatorActionEnum(Enum):
+    DOWN = -1
+    OPEN = 0
+    UP = 1
+    IDLE = 2
+
+    @staticmethod
+    def count() -> int:
+        return len([d for d in ElevatorActionEnum])
+
+
+class ElevatorEnvAction:
+    def __init__(self, elevator_idx: int, elevator_action: ElevatorActionEnum):
+        self.elevator_idx: int = elevator_idx
+        self.elevator_action: ElevatorActionEnum = elevator_action
 
 
 class Elevator:
@@ -64,3 +82,11 @@ class Elevator:
 
     def idle(self):
         self.time += IDLE_TIME
+
+    def valid_actions(self) -> np.ndarray:
+        valid_actions = np.array([1 for _ in ElevatorActionEnum])
+        if self.floor == 0:
+            valid_actions[ElevatorActionEnum.DOWN.value] = 0
+        if self.floor + 1 == self.house.number_of_floors:
+            valid_actions[ElevatorActionEnum.UP.value] = 0
+        return valid_actions

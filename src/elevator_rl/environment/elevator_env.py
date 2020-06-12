@@ -1,29 +1,16 @@
-from enum import Enum
-from typing import List, Tuple
+from typing import List
+from typing import Tuple
 
 import numpy as np
 
-from elevator_rl.elevator_env_render import render
-from elevator_rl.example_houses import get_10_story_house
-from elevator_rl.house import House
-from elevator_rl.observation import Observation
+from elevator_rl.environment.elevator import ElevatorActionEnum
+from elevator_rl.environment.elevator import ElevatorEnvAction
+from elevator_rl.environment.elevator_env_render import render
+from elevator_rl.environment.example_houses import get_10_story_house
+from elevator_rl.environment.house import House
+from elevator_rl.environment.observation import Observation
 
-
-class ElevatorActionEnum(Enum):
-    DOWN = -1
-    OPEN = 0
-    UP = 1
-    IDLE = 2
-
-    @staticmethod
-    def count() -> int:
-        return len([d for d in ElevatorActionEnum])
-
-
-class ElevatorEnvAction:
-    def __init__(self, elevator_idx: int, elevator_action: ElevatorActionEnum):
-        self.elevator_idx: int = elevator_idx
-        self.elevator_action: ElevatorActionEnum = elevator_action
+EPISODE_TIME_LENGTH = 60 * 5  # TODO 60 * 60 * 24
 
 
 class ElevatorEnv:
@@ -33,13 +20,14 @@ class ElevatorEnv:
         self.house: House = house
         self.next_elevator: int = 0
         self.transported_passenger_times: List[float] = []
+        self.reward_acc = 0.0
 
     def step(self, env_action: ElevatorEnvAction) -> Tuple[Observation, float]:
         # move only if valid move
         if env_action.elevator_idx not in range(0, len(self.house.elevators)):
             raise ValueError("Elevator-ID does not exist")
         assert (
-                env_action.elevator_idx == self.next_elevator
+            env_action.elevator_idx == self.next_elevator
         ), "elevators should be controlled in the right order"
 
         start_time = self.house.time
@@ -69,13 +57,18 @@ class ElevatorEnv:
         # run time until action takes place
         self.house.elapse_time_to(new_time)
 
-        return self.get_observation(), -1 * self._quadratic_waiting_time(start_time, new_time)
+        reward = -1 * self._quadratic_waiting_time(start_time, new_time)
+        self.reward_acc += reward
+        return self.get_observation(), reward
 
     def get_observation(self):
         return Observation(self.house, self.next_elevator)
 
-    def render(self):
-        render(self.house)
+    def render(self, method: str = None, step: int = None):
+        render(self.house, method, step)
+
+    def is_end_of_day(self):
+        return self.house.elevators[self.next_elevator].time > EPISODE_TIME_LENGTH
 
     def get_total_waiting_time(self) -> float:
         """

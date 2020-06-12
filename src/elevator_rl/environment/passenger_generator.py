@@ -6,11 +6,11 @@ from typing import TypeVar
 
 import numpy as np
 
-from elevator_rl.elevator import Elevator
-from elevator_rl.passenger import Passenger
+from elevator_rl.environment.elevator import Elevator
+from elevator_rl.environment.passenger import Passenger
 
 if TYPE_CHECKING:
-    from elevator_rl.house import House
+    from elevator_rl.environment.house import House
 
 T1 = TypeVar("T1")
 T2 = TypeVar("T2")
@@ -157,6 +157,7 @@ class PassengerGenerator:
         target_probabilities = self.target_probabilities * mask
         return target_probabilities / np.sum(target_probabilities)
 
+    # TODO: TIM continue reading from here
     def _create_up_or_down_passengers(
         self, floor: int, time: float, exclude_idxs: List[int], waiting_since: float
     ) -> Tuple[np.ndarray, List[int]]:
