@@ -22,6 +22,7 @@ class House:
         assert number_of_elevators > 0
 
         self.number_of_floors: int = number_of_floors
+        self.elevator_capacity: int = elevator_capacity
         self.up_requests: np.ndarray = np.zeros(self.number_of_floors, bool)
         self.down_requests: np.ndarray = np.zeros(self.number_of_floors, bool)
         self.up_requests_waiting_since: np.ndarray = np.zeros(

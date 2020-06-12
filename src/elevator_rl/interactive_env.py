@@ -28,8 +28,10 @@ def main():
             print("valid commands are: {u, d, o,i }")
             continue
 
+        obs, reward = env.step(ElevatorEnvAction(env.next_elevator, action))
+        as_vector = obs.as_vector()
         print(
-            f"reward: {env.step(ElevatorEnvAction(env.next_elevator, action))}\t"
+            f"reward: {reward}\t"
             f"total waiting time: {env.get_total_waiting_time()}"
         )
         env.render()
