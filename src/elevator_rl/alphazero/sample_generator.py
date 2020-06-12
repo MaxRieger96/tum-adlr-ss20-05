@@ -5,6 +5,7 @@ from typing import Tuple
 
 import numpy as np
 import torch
+from elevator_rl.alphazero.model import Model
 from torch.distributions import Categorical
 
 from elevator_rl.alphazero.mcts import MCTS
@@ -38,7 +39,7 @@ class Generator:
         mcts_temp: float,
         mcts_cpuct: int,
         mcts_observation_weight: float,
-        no_nn: bool,
+        model: Model = None,
     ) -> Tuple[List[np.ndarray], List[np.ndarray], int]:
         current_env = deepcopy(self.env)
         pis = []
@@ -50,7 +51,7 @@ class Generator:
                 mcts_cpuct,
                 self.ranked_reward_buffer,
                 mcts_observation_weight,
-                no_nn,
+                model,
             )
 
             probs = mcts.get_action_probabilities(current_env, mcts_temp)

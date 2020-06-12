@@ -28,7 +28,7 @@ def main():
             mcts_temp=MCTS_TEMP,
             mcts_cpuct=MCTS_CPUCT,
             mcts_observation_weight=MCTS_OBSERVATION_WEIGHT,
-            no_nn=True,  # THIS SETS MCTS TO THE UNIFORM MODEL
+            model=None,  # THIS SETS MCTS TO THE UNIFORM MODEL
         )
         print("Total reward at the end of the day: {}".format(total_reward))
 

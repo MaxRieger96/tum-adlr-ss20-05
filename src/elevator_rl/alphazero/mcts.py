@@ -4,6 +4,8 @@ from typing import List
 from typing import Optional
 
 import numpy as np
+import torch
+from elevator_rl.alphazero.model import Model
 
 from elevator_rl.alphazero.ranked_reward import RankedRewardBuffer
 from elevator_rl.baseline.uniform_model import UniformModel
@@ -12,7 +14,7 @@ from elevator_rl.environment.elevator_env import ElevatorEnv
 from elevator_rl.environment.elevator_env import ElevatorEnvAction
 
 EPS = 1e-8
-
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 def normalize_reward(x: float, k: float) -> float:
     return np.tanh(x / k)
@@ -25,7 +27,7 @@ class MCTS:
         c_puct: float,
         ranked_reward_buffer: Optional[RankedRewardBuffer],
         observation_weight: float,
-        no_nn: bool,
+        model: Model,
     ):
         self.num_simulations = num_simulations
         self.c_puct = c_puct
@@ -39,11 +41,12 @@ class MCTS:
         self.prior_prob_state = {}  # stores prior of policy
         self.all_states_dump = []
 
-        self.no_nn = no_nn
-        if no_nn:
+        self.neural_network_mcts = True if model is not None else False
+        if model is None:
             self.model = UniformModel()
         else:
-            pass  # TODO
+            self.model = model
+            self.model.eval()
 
     def get_action_probabilities(
         self, current_env: ElevatorEnv, temperature: float
@@ -94,14 +97,15 @@ class MCTS:
         ].valid_actions()
         if state not in self.prior_prob_state:
             # leaf node
-            if self.no_nn:
-                policy, value = self.model.get_policy_and_value(current_env)
-            else:
+            if self.neural_network_mcts:
                 observation_array = current_env.get_observation().as_array()
-                policy, value = self.model.get_policy_and_value(
-                    observation_array
-                )  # TODO build this (just placeholder)
-                value = value.item()
+                x = torch.from_numpy(observation_array)
+                x = x.to(device).to(torch.float32)
+                policy, value = self.model(x)
+                policy = policy.squeeze().cpu().detach().numpy()
+                value = value.squeeze().cpu().detach().numpy()
+            else:
+                policy, value = self.model.get_policy_and_value(current_env)
             self.prior_prob_state[state] = policy
 
             self.prior_prob_state[state] = (
