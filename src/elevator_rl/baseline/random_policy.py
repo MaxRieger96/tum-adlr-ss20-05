@@ -1,10 +1,11 @@
 import numpy as np
 import torch
-from elevator_rl.environment.elevator import ElevatorEnvAction
-
-from elevator_rl.environment.elevator_env import ElevatorActionEnum, ElevatorEnv
-from elevator_rl.environment.example_houses import get_simple_house
 from torch.distributions import Categorical
+
+from elevator_rl.environment.elevator import ElevatorEnvAction
+from elevator_rl.environment.elevator_env import ElevatorActionEnum
+from elevator_rl.environment.elevator_env import ElevatorEnv
+from elevator_rl.environment.example_houses import get_simple_house
 
 
 class RandomPolicy:
@@ -29,7 +30,9 @@ def main():
     step = 0
     while not env.is_end_of_day():
         random_action = random_policy.get_action(env)
-        env.step(ElevatorEnvAction(env.next_elevator, ElevatorActionEnum(random_action)))
+        env.step(
+            ElevatorEnvAction(env.next_elevator, ElevatorActionEnum(random_action))
+        )
         step += 1
         # env.render()
         env.render(method="file", step=step)

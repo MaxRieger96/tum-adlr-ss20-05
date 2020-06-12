@@ -6,7 +6,7 @@ from typing import Optional
 import numpy as np
 
 from elevator_rl.alphazero.ranked_reward import RankedRewardBuffer
-from elevator_rl.baseline.random_policy import RandomPolicy
+from elevator_rl.baseline.uniform_model import UniformModel
 from elevator_rl.environment.elevator_env import ElevatorActionEnum
 from elevator_rl.environment.elevator_env import ElevatorEnv
 from elevator_rl.environment.elevator_env import ElevatorEnvAction
@@ -25,6 +25,7 @@ class MCTS:
         c_puct: float,
         ranked_reward_buffer: Optional[RankedRewardBuffer],
         observation_weight: float,
+        no_nn: bool,
     ):
         self.num_simulations = num_simulations
         self.c_puct = c_puct
@@ -36,8 +37,13 @@ class MCTS:
         self.visit_count = {}  # stores #times edge s,a was visited
         self.visit_count_state = {}  # stores #times state was visited
         self.prior_prob_state = {}  # stores prior of policy
-        self.model = RandomPolicy()
         self.all_states_dump = []
+
+        self.no_nn = no_nn
+        if no_nn:
+            self.model = UniformModel()
+        else:
+            pass  # TODO
 
     def get_action_probabilities(
         self, current_env: ElevatorEnv, temperature: float
@@ -88,10 +94,14 @@ class MCTS:
         ].valid_actions()
         if state not in self.prior_prob_state:
             # leaf node
-            # TODO use Model instead of the random policy
-            # observation_array = current_env.get_observation().as_array()
-            policy, value = self.model.get_policy_and_value()
-            # value = value.item()
+            if self.no_nn:
+                policy, value = self.model.get_policy_and_value(current_env)
+            else:
+                observation_array = current_env.get_observation().as_array()
+                policy, value = self.model.get_policy_and_value(
+                    observation_array
+                )  # TODO build this (just placeholder)
+                value = value.item()
             self.prior_prob_state[state] = policy
 
             self.prior_prob_state[state] = (

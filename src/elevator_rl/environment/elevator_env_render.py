@@ -1,7 +1,7 @@
+import os
 from enum import Enum
 from typing import List
 
-import os
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.patches import Polygon

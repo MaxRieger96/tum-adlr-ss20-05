@@ -1,3 +1,4 @@
+import logging
 from random import random
 
 import numpy as np
@@ -14,7 +15,7 @@ class Passenger:
 
     def decide_to_leave_elevator(self, floor: int) -> bool:
         if random() <= self.target_floor_distribution[floor]:
-            print("one leaves")
+            logging.info("one leaves")
             return True
         else:
             self.target_floor_distribution[floor] = 0

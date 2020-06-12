@@ -1,3 +1,4 @@
+import logging
 from typing import List
 from typing import Set
 from typing import Tuple
@@ -118,7 +119,7 @@ class PassengerGenerator:
             if count == 0:
                 continue
 
-            print("new request!")
+            logging.info("new request!")
 
             # sample arrival time for each passenger
             arrival_times = np.random.uniform(low=0, high=time_delta, size=count)

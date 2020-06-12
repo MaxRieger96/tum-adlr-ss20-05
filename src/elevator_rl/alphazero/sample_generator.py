@@ -38,8 +38,8 @@ class Generator:
         mcts_temp: float,
         mcts_cpuct: int,
         mcts_observation_weight: float,
+        no_nn: bool,
     ) -> Tuple[List[np.ndarray], List[np.ndarray], int]:
-
         current_env = deepcopy(self.env)
         pis = []
         observations = [current_env.get_observation().as_array()]
@@ -50,6 +50,7 @@ class Generator:
                 mcts_cpuct,
                 self.ranked_reward_buffer,
                 mcts_observation_weight,
+                no_nn,
             )
 
             probs = mcts.get_action_probabilities(current_env, mcts_temp)
