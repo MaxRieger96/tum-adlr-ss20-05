@@ -1,6 +1,8 @@
 from enum import Enum
 from typing import List, Tuple
 
+import numpy as np
+
 from elevator_rl.elevator_env_render import render
 from elevator_rl.example_houses import get_10_story_house
 from elevator_rl.house import House
@@ -67,7 +69,7 @@ class ElevatorEnv:
         # run time until action takes place
         self.house.elapse_time_to(new_time)
 
-        return self.get_observation(), self._calc_reward(start_time, new_time)
+        return self.get_observation(), -1 * self._quadratic_waiting_time(start_time, new_time)
 
     def get_observation(self):
         return Observation(self.house, self.next_elevator)
@@ -76,19 +78,54 @@ class ElevatorEnv:
         render(self.house)
 
     def get_total_waiting_time(self) -> float:
+        """
+        gets the sum of all waiting times of passengers, this includes:
+        - all passengers, which have be transported before
+        - all passengers in elevators
+        - randomly sampled passengers at floors with request signals
+        :return: total_waiting_time: float
+        """
         return sum(self._get_all_waiting_times())
 
     def _get_all_waiting_times(self) -> List[float]:
+        """
+        gets all waiting times of passengers, this includes:
+        - all passengers, which have be transported before
+        - all passengers in elevators
+        - randomly sampled passengers at floors with request signals
+        :return: waiting_times: List[float]
+        """
         return (
-                self.transported_passenger_times
-                + self.house.get_waiting_time_for_all_waiting_passengers()
+            self.transported_passenger_times
+            + self.house.get_waiting_time_for_all_waiting_passengers()
         )
 
-    def _calc_reward(self, start_time: float, until_time: float) -> float:
+    def _calc_passenger_waiting_time(
+        self, start_time: float, until_time: float
+    ) -> float:
+        """
+        calc the expected accumulated waiting time of passengers between start_time and
+        until_time
+        :return: accumulated_waiting_time: float
+        """
         # use expected values of counts of passengers to calculate all waiting times
         time_delta = until_time - start_time
         passenger_count = self.house.get_expected_passenger_count(until_time)
-        return -1 * time_delta * passenger_count
+        return time_delta * passenger_count
+
+    def _quadratic_waiting_time(self, start_time: float, new_time: float) -> float:
+        """
+        computes the delta between quadratic waiting times from start_time to new_time
+        :return:
+        """
+        arrival_times = self.house.get_arrival_time_for_all_waiting_passengers()
+        if len(arrival_times) == 0:
+            return 0
+        arrival_times = np.array(arrival_times)
+        waiting_times_at_start = np.maximum(0, start_time - arrival_times)
+        waiting_times_at_new_time = new_time - arrival_times
+        quadratic_deltas = waiting_times_at_new_time ** 2 - waiting_times_at_start ** 2
+        return float(np.sum(quadratic_deltas))
 
 
 def main():

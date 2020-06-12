@@ -55,9 +55,28 @@ def one_hot(x: int, n: int) -> np.ndarray:
 
 
 def equal_distribution(indices: Set[int], n: int) -> np.ndarray:
+    """
+    create an equal distribution for given indices, probability of zero for others
+    n specifies length of vector
+    :return: probabilities: np.ndarray
+    """
     assert len(indices) > 0
     res = np.zeros(n, dtype=float)
     res[list(indices)] = 1.0
+    return res / np.sum(res)
+
+
+def adapted_categorical_distribution_distribution(
+    original_distribution: np.ndarray, indices: Set[int]
+) -> np.ndarray:
+    """
+    adapt distribution so that only given indices have probability >=0
+    :return: adapted_distribution: np.ndarray
+    """
+    assert len(indices) > 0
+    excluded_indices = {i for i in range(len(original_distribution))} - indices
+    res = original_distribution.copy()
+    res[list(excluded_indices)] = 0
     return res / np.sum(res)
 
 
@@ -237,13 +256,16 @@ class PassengerGenerator:
             return arrival_times, targets, want_up
 
     def create_passengers(self, elevator: Elevator) -> Tuple[Set[Passenger], List[int]]:
-        # sample passengers which leave and passengers which enter
-        #  1. Calc nr of passengers waiting for each dir iteratively (~Exp)
-        #  2. Decide which passengers enter by capacity, omit others
-        #  3. For each passenger draw target floor
-        #  4. Make set of target floors
-        #  5. Assign probabilities of target floors for passengers
-        #       (100% for one passenger on each floor in set of target floors)
+        """
+        sample passengers which leave given elevator and passengers which enter
+         1. Calc nr of passengers waiting for each dir iteratively (~Exp)
+         2. Decide which passengers enter by capacity, omit others
+         3. For each passenger draw target floor
+         4. Make set of target floors
+         5. Assign probabilities of target floors for passengers
+              (100% for one passenger on each floor in set of target floors)
+        :return: passengers, requests: Tuple[Set[Passenger], List[int]]
+        """
         if (
             not self.house.up_requests[elevator.floor]
             and not self.house.down_requests[elevator.floor]
@@ -285,17 +307,16 @@ class PassengerGenerator:
                 passengers.append(p)
 
             # assign random distributions to remaining passengers
-            # TODO use target probs instead of uniform distribution
             for i in range(len(up_floors), len(up_passengers)):
-                up_distribution = equal_distribution(
-                    up_floors, len(self.target_probabilities)
+                up_distribution = adapted_categorical_distribution_distribution(
+                    self.target_probabilities, up_floors
                 )
                 p = Passenger(up_distribution, arrival_times[up_passengers[i]])
                 passengers.append(p)
 
             for i in range(len(down_floors), len(down_passengers)):
-                down_distribution = equal_distribution(
-                    down_floors, len(self.target_probabilities)
+                down_distribution = adapted_categorical_distribution_distribution(
+                    self.target_probabilities, down_floors
                 )
                 p = Passenger(down_distribution, arrival_times[down_passengers[i]])
                 passengers.append(p)
@@ -305,6 +326,11 @@ class PassengerGenerator:
     def expected_passengers_waiting(
         self, floor: int, waiting_since: float, current_time: float
     ) -> float:
+        """
+        calculate the expected number of passengers appearing at the given floor between
+        waiting_since and current_time
+        :return: expected_nr_waiting: float
+        """
         # assuming the poisson distribution, the expected value is exactly the rate
         time_delta = current_time - waiting_since
         return self.request_rates[floor] * time_delta
