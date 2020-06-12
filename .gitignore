@@ -1,7 +1,9 @@
 # ignore data and log folder
 log/
 !tests/unit_tests/data
-
+src/elevator_rl/plots/*
+!src/elevator_rl/plots/__init__.py
+!src/elevator_rl/video.mp4
 
 ### Python
 # Byte-compiled / optimized / DLL files

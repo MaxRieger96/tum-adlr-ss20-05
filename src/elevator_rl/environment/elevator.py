@@ -19,10 +19,10 @@ IDLE_TIME = 10.0  # TODO decide if we want to have the option to idle
 
 
 class ElevatorActionEnum(Enum):
-    DOWN = -1
-    OPEN = 0
-    UP = 1
-    IDLE = 2
+    DOWN = 0
+    OPEN = 1
+    UP = 2
+    IDLE = 3
 
     @staticmethod
     def count() -> int:

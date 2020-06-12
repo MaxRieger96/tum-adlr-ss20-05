@@ -1,6 +1,7 @@
 from enum import Enum
 from typing import List
 
+import os
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.patches import Polygon
@@ -167,4 +168,6 @@ def render(house: House, method: str, step):
     if method == "matplotlib":
         plt.show()
     else:
-        plt.savefig("step_{}.jpg".format(step))
+        ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
+        plt.savefig("{}/step_{}.png".format(os.path.join(ROOT_DIR, "../plots"), step))
+        plt.close()

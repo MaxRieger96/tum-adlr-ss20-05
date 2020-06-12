@@ -58,7 +58,7 @@ class Generator:
             pis.append(probs)
 
             probs = torch.from_numpy(probs)
-            action = ElevatorActionEnum(self.sample_action(probs) - 1)
+            action = ElevatorActionEnum(self.sample_action(probs))
             obs, reward = current_env.step(
                 ElevatorEnvAction(current_env.next_elevator, action)
             )
