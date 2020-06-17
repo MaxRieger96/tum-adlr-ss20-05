@@ -94,7 +94,7 @@ class EpisodeFactory:
         pool = Pool(n_processes)
         res = pool.starmap(
             self._generator.perform_episode,
-            [[mcts_samples, mcts_temp, mcts_cpuct, mcts_observation_weight, model,]]
+            [[mcts_samples, mcts_temp, mcts_cpuct, mcts_observation_weight, model]]
             * n_episodes,
         )
         pool.close()
