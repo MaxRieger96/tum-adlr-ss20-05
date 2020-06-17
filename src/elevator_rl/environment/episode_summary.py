@@ -26,19 +26,31 @@ class Summary:
 
     def __str__(self):
         return (
-            f"transported {self.nr_passengers_transported} passengers "
-            f"({self.percent_transported()*100:.1f}%) "
+            f"transported {self.nr_passengers_transported:.1f} passengers "
+            f"({self.percent_transported() * 100:.1f}%) "
             f"while {self.nr_passengers_waiting:.1f} are still waiting in a total time "
             f"of {self.elapsed_time:.1f}s\n"
             f"transport took {self.avg_waiting_time_transported:.1f}s on average\n"
             f"quadratic waiting time: \t\t\t\t\t\t{self.quadratic_waiting_time:.1f}\n"
             f"estimated accumulated quadratic waiting time:\t"
-            f"{-1*self.accumulated_reward:.1f}\n"
+            f"{-1 * self.accumulated_reward:.1f}\n"
         )
 
     def percent_transported(self) -> float:
         return self.nr_passengers_transported / (
             self.nr_passengers_transported + self.nr_passengers_waiting
+        )
+
+
+class SummaryStdDev(Summary):
+    def __str__(self):
+        return (
+            f"transported passengers stddev: {self.nr_passengers_transported:.1f}\n"
+            f"still waiting stddev: {self.nr_passengers_waiting:.1f}\n"
+            f"transport time stddev {self.avg_waiting_time_transported:.1f}\n"
+            f"quadratic waiting time stddev: {self.quadratic_waiting_time:.1f}\n"
+            f"estimated accumulated quadratic waiting time stddev: "
+            f"{-1 * self.accumulated_reward:.1f}\n"
         )
 
 
@@ -81,7 +93,7 @@ def combine_summaries(summaries: List[Summary]) -> Tuple[Summary, Summary]:
             accumulated_reward=sum(s.accumulated_reward for s in summaries) / n,
             quadratic_waiting_time=sum(s.quadratic_waiting_time for s in summaries) / n,
         ),
-        Summary(
+        SummaryStdDev(
             nr_passengers_transported=stdev(
                 s.nr_passengers_transported for s in summaries
             ),

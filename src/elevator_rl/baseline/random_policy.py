@@ -44,7 +44,9 @@ def main():
         print(env.get_summary())
         summaries.append(env.get_summary())
 
-    print(combine_summaries(summaries))
+    avg, stddev = combine_summaries(summaries)
+    print(avg)
+    print(stddev)
 
 
 if __name__ == "__main__":

@@ -1,4 +1,6 @@
 import logging
+import pickle
+from datetime import datetime
 
 import numpy as np
 
@@ -9,11 +11,11 @@ from elevator_rl.environment.elevator_env import ElevatorEnv
 from elevator_rl.environment.episode_summary import combine_summaries
 from elevator_rl.environment.example_houses import get_simple_house
 
-MCTS_SAMPLES = 200
+MCTS_SAMPLES = 10
 MCTS_TEMP = 1
 MCTS_CPUCT = 4
 MCTS_OBSERVATION_WEIGHT = 1.0  # TODO change for modified mcts
-EPISODES = 100
+EPISODES = 16
 PROCESSES = 16
 
 
@@ -55,7 +57,13 @@ def main():
     summaries = [e[3] for e in episodes]
 
     print()
-    print(combine_summaries(summaries))
+    with open(
+        f'{datetime.now().strftime("%Y-%m-%d_%H:%M:%S")}_{MCTS_SAMPLES}', "wb"
+    ) as handle:
+        pickle.dump(summaries, handle, protocol=pickle.HIGHEST_PROTOCOL)
+    avg, stddev = combine_summaries(summaries)
+    print(avg)
+    print(stddev)
     print(f"{MCTS_SAMPLES} mcts samples")
 
 
