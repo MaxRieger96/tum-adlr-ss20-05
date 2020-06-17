@@ -6,6 +6,7 @@ from typing import Tuple
 import numpy as np
 import torch
 from torch.distributions import Categorical
+from torch.multiprocessing import Pool
 
 from elevator_rl.alphazero.mcts import MCTS
 from elevator_rl.alphazero.model import Model
@@ -57,8 +58,8 @@ class Generator:
 
             probs = mcts.get_action_probabilities(current_env, mcts_temp)
             # TODO remove these debugging prints:
-            #  print(probs)
             #  current_env.render()
+            #  print(probs)
             probs = np.array(probs, dtype=np.float32)
 
             pis.append(probs)
@@ -73,3 +74,30 @@ class Generator:
 
         print(".", end="", flush=True)
         return observations, pis, total_reward, current_env.get_summary()
+
+
+class EpisodeFactory:
+    def __init__(self, generator: Generator):
+        self._generator: Generator = generator
+
+    def create_episodes(
+        self,
+        n_episodes: int,
+        n_processes: int,
+        mcts_samples: int,
+        mcts_temp: float,
+        mcts_cpuct: int,
+        mcts_observation_weight: float,
+        model: Model,
+    ):
+
+        pool = Pool(n_processes)
+        res = pool.starmap(
+            self._generator.perform_episode,
+            [[mcts_samples, mcts_temp, mcts_cpuct, mcts_observation_weight, model]]
+            * n_episodes,
+        )
+        pool.close()
+        pool.terminate()
+        pool.join()
+        return res

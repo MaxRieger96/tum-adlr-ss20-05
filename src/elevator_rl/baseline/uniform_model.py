@@ -3,17 +3,18 @@ import logging
 import numpy as np
 
 from elevator_rl.alphazero.model import Model
+from elevator_rl.alphazero.sample_generator import EpisodeFactory
 from elevator_rl.alphazero.sample_generator import Generator
 from elevator_rl.environment.elevator_env import ElevatorEnv
 from elevator_rl.environment.episode_summary import combine_summaries
 from elevator_rl.environment.example_houses import get_simple_house
 
-MCTS_SAMPLES = 100
+MCTS_SAMPLES = 200
 MCTS_TEMP = 1
 MCTS_CPUCT = 4
 MCTS_OBSERVATION_WEIGHT = 1.0  # TODO change for modified mcts
-ITERATIONS = 100
-EPISODES_PER_ITERATION = 1  # TODO move this to config
+EPISODES = 100
+PROCESSES = 16
 
 
 class UniformModel(Model):
@@ -40,23 +41,22 @@ def main():
     env.render(method="matplotlib", step=0)
     generator = Generator(env, ranked_reward_buffer=None)  # TODO use configs
 
-    summaries = []
-    iteration_start = 0
-    for i in range(iteration_start, ITERATIONS):
-        print(f"iteration {i}: sampling started")
-        for _ in range(EPISODES_PER_ITERATION):
-            observations, pis, total_reward, summary = generator.perform_episode(
-                mcts_samples=MCTS_SAMPLES,
-                mcts_temp=MCTS_TEMP,
-                mcts_cpuct=MCTS_CPUCT,
-                mcts_observation_weight=MCTS_OBSERVATION_WEIGHT,
-                model=UniformModel(),
-            )
-            print()
-            print(summary)
-            summaries.append(summary)
+    factory = EpisodeFactory(generator)
+    model = UniformModel()
+    episodes = factory.create_episodes(
+        EPISODES,
+        PROCESSES,
+        MCTS_SAMPLES,
+        MCTS_TEMP,
+        MCTS_CPUCT,
+        MCTS_OBSERVATION_WEIGHT,
+        model,
+    )
+    summaries = [e[3] for e in episodes]
 
+    print()
     print(combine_summaries(summaries))
+    print(f"{MCTS_SAMPLES} mcts samples")
 
 
 if __name__ == "__main__":

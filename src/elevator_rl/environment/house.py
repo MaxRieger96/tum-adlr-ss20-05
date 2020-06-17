@@ -125,6 +125,8 @@ class House:
         at floors or in elevators
         the arrival times for passengers at floors are randomly sampled
 
+        TODO use expected values to get arrival times and omit target
+
         :return individual_arrival_times: List[float]
         """
         individual_arrival_times = []
@@ -134,6 +136,7 @@ class House:
                 individual_arrival_times.append(p.waiting_since)
         # passengers waiting at floors
         for floor, _ in enumerate(self.up_requests):
+            # TODO here we see, that we don't need targets and directions
             times, _, _ = self.passenger_gen.sample_passenger_times(floor, self.time)
             individual_arrival_times += times
         return individual_arrival_times

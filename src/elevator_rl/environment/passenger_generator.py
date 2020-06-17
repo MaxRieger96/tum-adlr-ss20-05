@@ -13,6 +13,8 @@ from elevator_rl.environment.passenger import Passenger
 if TYPE_CHECKING:
     from elevator_rl.environment.house import House
 
+EPS = 1e-4
+
 T1 = TypeVar("T1")
 T2 = TypeVar("T2")
 
@@ -102,7 +104,7 @@ class PassengerGenerator:
         self.house: "House" = house
         assert len(request_rates) == house.number_of_floors
         self.request_rates: np.ndarray = request_rates
-        assert np.sum(target_probabilities) == 1.0
+        assert 1.0 - EPS <= np.sum(target_probabilities) <= 1.0 + EPS
         assert len(target_probabilities) == house.number_of_floors
         self.target_probabilities: np.ndarray = target_probabilities
 
