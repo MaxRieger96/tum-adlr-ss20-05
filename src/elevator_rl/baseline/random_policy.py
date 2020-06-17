@@ -5,6 +5,7 @@ from torch.distributions import Categorical
 from elevator_rl.environment.elevator import ElevatorEnvAction
 from elevator_rl.environment.elevator_env import ElevatorActionEnum
 from elevator_rl.environment.elevator_env import ElevatorEnv
+from elevator_rl.environment.episode_summary import combine_summaries
 from elevator_rl.environment.example_houses import get_simple_house
 
 
@@ -22,7 +23,8 @@ class RandomPolicy:
 
 
 def main():
-    for _ in range(10):
+    summaries = []
+    for _ in range(100):
         house = get_simple_house()
 
         env = ElevatorEnv(house)
@@ -39,6 +41,9 @@ def main():
             # env.render(method="file", step=step)
         # print("Total reward at the end of day: {}".format(env.reward_acc))
         print(env.get_summary())
+        summaries.append(env.get_summary())
+
+    print(combine_summaries(summaries))
 
 
 if __name__ == "__main__":

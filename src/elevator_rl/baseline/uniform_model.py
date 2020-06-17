@@ -5,13 +5,14 @@ import numpy as np
 from elevator_rl.alphazero.model import Model
 from elevator_rl.alphazero.sample_generator import Generator
 from elevator_rl.environment.elevator_env import ElevatorEnv
+from elevator_rl.environment.episode_summary import combine_summaries
 from elevator_rl.environment.example_houses import get_simple_house
 
 MCTS_SAMPLES = 100
 MCTS_TEMP = 1
 MCTS_CPUCT = 4
 MCTS_OBSERVATION_WEIGHT = 1.0  # TODO change for modified mcts
-ITERATIONS = 1
+ITERATIONS = 100
 EPISODES_PER_ITERATION = 1  # TODO move this to config
 
 
@@ -39,6 +40,7 @@ def main():
     env.render(method="matplotlib", step=0)
     generator = Generator(env, ranked_reward_buffer=None)  # TODO use configs
 
+    summaries = []
     iteration_start = 0
     for i in range(iteration_start, ITERATIONS):
         print(f"iteration {i}: sampling started")
@@ -52,6 +54,9 @@ def main():
             )
             print()
             print(summary)
+            summaries.append(summary)
+
+    print(combine_summaries(summaries))
 
 
 if __name__ == "__main__":

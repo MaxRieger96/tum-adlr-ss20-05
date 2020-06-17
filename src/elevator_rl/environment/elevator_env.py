@@ -101,7 +101,7 @@ class ElevatorEnv:
         generated passenger requests
         :return:
         """
-        return tuple(self._action_history)
+        return tuple((x.elevator_idx, x.elevator_action.value) for x in self._action_history)
 
     def clear_action_history(self):
         self._action_history = []

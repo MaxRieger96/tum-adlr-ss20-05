@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, List
 
 if TYPE_CHECKING:
     from elevator_rl.environment.elevator_env import ElevatorEnv
@@ -59,3 +59,7 @@ def get_summary(env: "ElevatorEnv") -> Summary:
         accumulated_reward=env.reward_acc,
         quadratic_waiting_time=env.get_quadratic_total_waiting_time(),
     )
+
+
+def combine_summaries(summaries: List[Summary]) -> float:
+    return sum(s.quadratic_waiting_time for s in summaries) / len(summaries)
