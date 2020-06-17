@@ -11,12 +11,13 @@ from elevator_rl.environment.elevator_env import ElevatorEnv
 from elevator_rl.environment.episode_summary import combine_summaries
 from elevator_rl.environment.example_houses import get_simple_house
 
-MCTS_SAMPLES = 10
+MCTS_SAMPLES = 50
 MCTS_TEMP = 1
 MCTS_CPUCT = 4
 MCTS_OBSERVATION_WEIGHT = 1.0  # TODO change for modified mcts
-EPISODES = 16
+EPISODES = 100
 PROCESSES = 16
+GREEDY = True
 
 
 class UniformModel(Model):
@@ -53,6 +54,7 @@ def main():
         MCTS_CPUCT,
         MCTS_OBSERVATION_WEIGHT,
         model,
+        GREEDY,
     )
     summaries = [e[3] for e in episodes]
 
@@ -64,7 +66,7 @@ def main():
     avg, stddev = combine_summaries(summaries)
     print(avg)
     print(stddev)
-    print(f"{MCTS_SAMPLES} mcts samples")
+    print(f"{MCTS_SAMPLES} mcts samples, greedy: {GREEDY}")
 
 
 if __name__ == "__main__":

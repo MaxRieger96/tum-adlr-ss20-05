@@ -30,10 +30,13 @@ class Generator:
         self.ranked_reward_buffer = ranked_reward_buffer
 
     @staticmethod
-    def sample_action(prior: torch.Tensor) -> int:
-        cat = Categorical(prior)
-        action = cat.sample()
-        return action.numpy().flatten()[0]
+    def sample_action(prior: torch.Tensor, greedy: bool) -> int:
+        if greedy:
+            return prior.argmax().numpy().flatten()[0]
+        else:
+            cat = Categorical(prior)
+            action = cat.sample()
+            return action.numpy().flatten()[0]
 
     def perform_episode(
         self,
@@ -42,6 +45,7 @@ class Generator:
         mcts_cpuct: int,
         mcts_observation_weight: float,
         model: Model,
+        greedy: bool,
     ) -> Tuple[List[np.ndarray], List[np.ndarray], int, Summary]:
         current_env = deepcopy(self.env)
         pis = []
@@ -65,7 +69,7 @@ class Generator:
             pis.append(probs)
 
             probs = torch.from_numpy(probs)
-            action = ElevatorActionEnum(self.sample_action(probs))
+            action = ElevatorActionEnum(self.sample_action(probs, greedy))
             obs, reward = current_env.step(
                 ElevatorEnvAction(current_env.next_elevator, action)
             )
@@ -89,12 +93,22 @@ class EpisodeFactory:
         mcts_cpuct: int,
         mcts_observation_weight: float,
         model: Model,
+        greedy: bool,
     ):
 
         pool = Pool(n_processes)
         res = pool.starmap(
             self._generator.perform_episode,
-            [[mcts_samples, mcts_temp, mcts_cpuct, mcts_observation_weight, model]]
+            [
+                [
+                    mcts_samples,
+                    mcts_temp,
+                    mcts_cpuct,
+                    mcts_observation_weight,
+                    model,
+                    greedy,
+                ]
+            ]
             * n_episodes,
         )
         pool.close()
