@@ -1,5 +1,5 @@
 mcts:
-  samples: 20
+  samples: 100
   temp: 1.0
   cpuct: 4
   observation_weight: 0.0

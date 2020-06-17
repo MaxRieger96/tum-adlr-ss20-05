@@ -5,14 +5,15 @@ from typing import Tuple
 
 import numpy as np
 import torch
-from elevator_rl.alphazero.model import Model
 from torch.distributions import Categorical
 
 from elevator_rl.alphazero.mcts import MCTS
+from elevator_rl.alphazero.model import Model
 from elevator_rl.alphazero.ranked_reward import RankedRewardBuffer
 from elevator_rl.environment.elevator_env import ElevatorActionEnum
 from elevator_rl.environment.elevator_env import ElevatorEnv
 from elevator_rl.environment.elevator_env import ElevatorEnvAction
+from elevator_rl.environment.episode_summary import Summary
 
 
 class Generator:
@@ -39,8 +40,8 @@ class Generator:
         mcts_temp: float,
         mcts_cpuct: int,
         mcts_observation_weight: float,
-        model: Model = None,
-    ) -> Tuple[List[np.ndarray], List[np.ndarray], int]:
+        model: Model,
+    ) -> Tuple[List[np.ndarray], List[np.ndarray], int, Summary]:
         current_env = deepcopy(self.env)
         pis = []
         observations = [current_env.get_observation().as_array()]
@@ -55,6 +56,9 @@ class Generator:
             )
 
             probs = mcts.get_action_probabilities(current_env, mcts_temp)
+            # TODO remove these debugging prints:
+            #  print(probs)
+            #  current_env.render()
             probs = np.array(probs, dtype=np.float32)
 
             pis.append(probs)
@@ -68,4 +72,4 @@ class Generator:
             total_reward += reward
 
         print(".", end="", flush=True)
-        return observations, pis, total_reward
+        return observations, pis, total_reward, current_env.get_summary()

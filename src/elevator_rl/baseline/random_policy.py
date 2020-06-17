@@ -22,21 +22,23 @@ class RandomPolicy:
 
 
 def main():
-    house = get_simple_house()
+    for _ in range(10):
+        house = get_simple_house()
 
-    env = ElevatorEnv(house)
-    env.render()
-    random_policy = RandomPolicy()
-    step = 0
-    while not env.is_end_of_day():
-        random_action = random_policy.get_action(env)
-        env.step(
-            ElevatorEnvAction(env.next_elevator, ElevatorActionEnum(random_action))
-        )
-        step += 1
+        env = ElevatorEnv(house)
         # env.render()
-        env.render(method="file", step=step)
-    print("Total reward at the end of day: {}".format(env.reward_acc))
+        random_policy = RandomPolicy()
+        step = 0
+        while not env.is_end_of_day():
+            random_action = random_policy.get_action(env)
+            env.step(
+                ElevatorEnvAction(env.next_elevator, ElevatorActionEnum(random_action))
+            )
+            step += 1
+            # env.render()
+            # env.render(method="file", step=step)
+        # print("Total reward at the end of day: {}".format(env.reward_acc))
+        print(env.get_summary())
 
 
 if __name__ == "__main__":

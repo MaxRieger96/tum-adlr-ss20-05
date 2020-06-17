@@ -6,21 +6,22 @@ import numpy as np
 from elevator_rl.environment.elevator import ElevatorActionEnum
 from elevator_rl.environment.elevator import ElevatorEnvAction
 from elevator_rl.environment.elevator_env_render import render
+from elevator_rl.environment.episode_summary import get_summary
+from elevator_rl.environment.episode_summary import Summary
 from elevator_rl.environment.example_houses import get_10_story_house
 from elevator_rl.environment.house import House
 from elevator_rl.environment.observation import Observation
 
-EPISODE_TIME_LENGTH = 60 * 5  # TODO 60 * 60 * 24
+EPISODE_TIME_LENGTH = 60 * 10  # TODO 60 * 60 * 24
 
 
 class ElevatorEnv:
-    # TODO env should give rewards and store waiting times for total rewards
-    # TODO there should be observations
     def __init__(self, house: House):
         self.house: House = house
         self.next_elevator: int = 0
         self.transported_passenger_times: List[float] = []
-        self.reward_acc = 0.0
+        self.reward_acc: float = 0.0
+        self._action_history: List[ElevatorEnvAction] = []
 
     def step(self, env_action: ElevatorEnvAction) -> Tuple[Observation, float]:
         # move only if valid move
@@ -47,6 +48,9 @@ class ElevatorEnv:
             ]
         elif env_action.elevator_action == ElevatorActionEnum.IDLE:
             self.house.elevators[env_action.elevator_idx].idle()
+
+        # store action in history
+        self._action_history.append(env_action)
 
         # find elevator which performs action next
         self.next_elevator = self.house.next_to_move()
@@ -79,6 +83,36 @@ class ElevatorEnv:
         :return: total_waiting_time: float
         """
         return sum(self._get_all_waiting_times())
+
+    def get_quadratic_total_waiting_time(self) -> float:
+        """
+        gets the sum of all waiting times of passengers squared, this includes:
+        - all passengers, which have be transported before
+        - all passengers in elevators
+        - randomly sampled passengers at floors with request signals
+        :return: total_quadratic_waiting_time: float
+        """
+        return sum(x ** 2 for x in self._get_all_waiting_times())
+
+    def to_hashable(self) -> Tuple:
+        """
+        computes a hashable representation of the based on the performed actions
+        note that this may hash to the same value even if there are differently
+        generated passenger requests
+        :return:
+        """
+        return tuple(self._action_history)
+
+    def clear_action_history(self):
+        self._action_history = []
+
+    def get_summary(self) -> Summary:
+        """
+        gives a summary of the episode performed by this environment
+        TODO add more relevant info
+        :return: nr_passengers_transported, nr_passengers_waiting
+        """
+        return get_summary(self)
 
     def _get_all_waiting_times(self) -> List[float]:
         """

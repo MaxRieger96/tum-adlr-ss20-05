@@ -4,6 +4,8 @@ from elevator_rl.environment.house import House
 
 
 class Observation:
+    # TODO this should return several vector for the elevators and one for the rest
+    # TODO  remove constants like nr of floors, elevator capacity
     def __init__(self, house: House, next_elevator_idx: int):
         self.number_of_floors: int = house.number_of_floors
         self.elevator_capacity: int = house.elevator_capacity
@@ -46,6 +48,3 @@ class Observation:
             ]
         )
         return temp
-
-    def to_hashable(self):
-        return tuple(self.as_array())

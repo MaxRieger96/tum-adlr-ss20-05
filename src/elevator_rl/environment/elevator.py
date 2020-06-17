@@ -22,7 +22,7 @@ class ElevatorActionEnum(Enum):
     DOWN = 0
     OPEN = 1
     UP = 2
-    IDLE = 3
+    # IDLE = 3  # TODO check if we can simply omit this
 
     @staticmethod
     def count() -> int:

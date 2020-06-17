@@ -1,32 +1,41 @@
 import numpy as np
 import torch
-from elevator_rl.alphazero.model import Model
+import yaml
+from torch.nn.functional import mse_loss
+from torch.optim import Adam
+
+from elevator_rl.alphazero.model import NNModel
 from elevator_rl.alphazero.ranked_reward import RankedRewardBuffer
 from elevator_rl.alphazero.replay_buffer import ReplayBuffer
 from elevator_rl.alphazero.sample_generator import Generator
 from elevator_rl.environment.elevator import ElevatorActionEnum
 from elevator_rl.environment.elevator_env import ElevatorEnv
 from elevator_rl.environment.example_houses import get_simple_house
-from torch.nn.functional import mse_loss
-from torch.optim import Adam
-import yaml
 
 stream = open("config_default.yaml", "r", encoding="utf-8")
 config = yaml.load(stream, Loader=yaml.FullLoader)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+EPISODES_PER_ITERATION = 10  # TODO move this to config
 
 
-def train(model: Model,
-          replay_buffer: ReplayBuffer,
-          ranked_reward_buffer: RankedRewardBuffer):
-    optimizer = Adam(model.parameters(), lr=config["train"]["lr"],
-                     weight_decay=config["train"]["weight_decay"])
+def train(
+    model: NNModel,
+    replay_buffer: ReplayBuffer,
+    ranked_reward_buffer: RankedRewardBuffer,
+):
+    optimizer = Adam(
+        model.parameters(),
+        lr=config["train"]["lr"],
+        weight_decay=config["train"]["weight_decay"],
+    )
     model.to(device)
     model.train()
     acc_loss_value = []
     acc_loss_policy = []
     logs = []
-    batch_count = config["train"]["samples_per_iteration"] // config["train"]["batch_size"]
+    batch_count = (
+        config["train"]["samples_per_iteration"] // config["train"]["batch_size"]
+    )
     for i in range(batch_count):
         samples = replay_buffer.sample(config["train"]["batch_size"])
 
@@ -40,7 +49,7 @@ def train(model: Model,
             pi_vec.append(pi)
             if True:  # TODO: if update_rank:
                 assert (
-                        ranked_reward_buffer is not None
+                    ranked_reward_buffer is not None
                 ), "rank can only be updated when ranked reward is used"
                 z_vec.append(ranked_reward_buffer.get_ranked_reward(total_reward))
             else:
@@ -57,7 +66,10 @@ def train(model: Model,
 
         pred_p, pred_v = model(obs_vec)
 
-        policy_loss = torch.sum(-pi_vec * torch.log(pred_p + 1e-8)) * config["train"]["policy_loss_factor"]
+        policy_loss = (
+            torch.sum(-pi_vec * torch.log(pred_p + 1e-8))
+            * config["train"]["policy_loss_factor"]
+        )
         value_loss = mse_loss(pred_v, z_vec) * config["train"]["value_loss_factor"]
 
         loss = value_loss + policy_loss
@@ -84,30 +96,35 @@ def main():
     env.render(method="matplotlib", step=0)
 
     replay_buffer = ReplayBuffer(capacity=config["replay_buffer"]["size"])
-    ranked_reward_buffer = RankedRewardBuffer(capacity=config["ranked_reward"]["size"],
-                                              threshold=config["ranked_reward"]["threshold"])
+    ranked_reward_buffer = RankedRewardBuffer(
+        capacity=config["ranked_reward"]["size"],
+        threshold=config["ranked_reward"]["threshold"],
+    )
     generator = Generator(env, ranked_reward_buffer=None)  # TODO make optional
-    model = Model(input_dims=env.get_observation().as_array().shape[0], outputs=ElevatorActionEnum.count())
+    model = NNModel(
+        input_dims=env.get_observation().as_array().shape[0],
+        outputs=ElevatorActionEnum.count(),
+    )
     iteration_start = 0
     for i in range(iteration_start, config["train"]["iterations"]):
         print(f"iteration {i}: sampling started")
-        observations, pis, total_reward = generator.perform_episode(
-            mcts_samples=config["mcts"]["samples"],
-            mcts_temp=config["mcts"]["temp"],
-            mcts_cpuct=config["mcts"]["cpuct"],
-            mcts_observation_weight=config["mcts"]["observation_weight"],
-            model=model,
-        )
-        for i, pi in enumerate(pis):
-            sample = (observations[i], pi, total_reward)
-            replay_buffer.push(sample)
+        # TODO generate more than one episode per step
+        for _ in range(EPISODES_PER_ITERATION):
+            observations, pis, total_reward, summary = generator.perform_episode(
+                mcts_samples=config["mcts"]["samples"],
+                mcts_temp=config["mcts"]["temp"],
+                mcts_cpuct=config["mcts"]["cpuct"],
+                mcts_observation_weight=config["mcts"]["observation_weight"],
+                model=model,
+            )
+            for j, pi in enumerate(pis):
+                sample = (observations[j], pi, total_reward)
+                replay_buffer.push(sample)
 
         # TRAIN model
         logs = train(model, replay_buffer, ranked_reward_buffer)
         for log in logs:
             print(log)
-
-        pass
 
 
 if __name__ == "__main__":
