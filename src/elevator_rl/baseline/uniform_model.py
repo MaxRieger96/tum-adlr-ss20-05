@@ -11,13 +11,12 @@ from elevator_rl.environment.elevator_env import ElevatorEnv
 from elevator_rl.environment.episode_summary import combine_summaries
 from elevator_rl.environment.example_houses import get_simple_house
 
-MCTS_SAMPLES = 50
-MCTS_TEMP = 1
+MCTS_SAMPLES = 10
+MCTS_TEMP = 0.01
 MCTS_CPUCT = 4
 MCTS_OBSERVATION_WEIGHT = 1.0  # TODO change for modified mcts
-EPISODES = 100
+EPISODES = 16
 PROCESSES = 16
-GREEDY = True
 
 
 class UniformModel(Model):
@@ -54,19 +53,26 @@ def main():
         MCTS_CPUCT,
         MCTS_OBSERVATION_WEIGHT,
         model,
-        GREEDY,
     )
     summaries = [e[3] for e in episodes]
 
     print()
     with open(
-        f'{datetime.now().strftime("%Y-%m-%d_%H:%M:%S")}_{MCTS_SAMPLES}', "wb"
+        f'{datetime.now().strftime("%Y-%m-%d_%H:%M:%S")}'
+        f"_mcts{MCTS_SAMPLES}"
+        f"_floors{env.house.number_of_floors}"
+        f"_elevs{len(env.house.elevators)}",
+        "wb",
     ) as handle:
         pickle.dump(summaries, handle, protocol=pickle.HIGHEST_PROTOCOL)
     avg, stddev = combine_summaries(summaries)
     print(avg)
     print(stddev)
-    print(f"{MCTS_SAMPLES} mcts samples, greedy: {GREEDY}")
+    print(
+        f"{MCTS_SAMPLES} mcts samples, mcts_temp: {MCTS_TEMP}, "
+        f"floors{env.house.number_of_floors}, elevs{len(env.house.elevators)}"
+    )
+    print("\n\n")
 
 
 if __name__ == "__main__":

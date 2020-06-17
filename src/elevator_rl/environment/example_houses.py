@@ -12,6 +12,10 @@ def get_8_story_house() -> House:
 
 
 def get_5_story_house() -> House:
+    return produce_house(10, 2, 5)
+
+
+def get_simple_house() -> House:
     return produce_house(10, 1, 3)
 
 
