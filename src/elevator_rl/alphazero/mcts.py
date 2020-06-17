@@ -62,7 +62,11 @@ class MCTS:
 
         for i in range(self.num_simulations):
             new_env = deepcopy(current_env)
-            self.search(new_env, prev_reward=current_env.reward_acc, step_depth=1)
+            self.search(
+                new_env,
+                prev_reward=current_env.reward_acc,
+                simulation_start_time=current_env.house.time,
+            )
 
         state = current_env.to_hashable()
         count_taken_directions = [
@@ -86,7 +90,10 @@ class MCTS:
         return probs
 
     def search(
-        self, current_env: ElevatorEnv, prev_reward: float, step_depth: int,
+        self,
+        current_env: ElevatorEnv,
+        prev_reward: float,
+        simulation_start_time: float,
     ) -> float:
         state = current_env.to_hashable()
         if current_env.is_end_of_day():
@@ -118,8 +125,15 @@ class MCTS:
                 )
 
             self.visit_count_state[state] = 0
-            # TODO this should respect elapsed time not step depth
-            avg_observed_reward = (current_env.reward_acc - prev_reward) / step_depth
+            time_delta = current_env.house.time - simulation_start_time
+            if time_delta > 0:
+                avg_observed_reward = (
+                    current_env.reward_acc - prev_reward
+                ) / time_delta
+            else:
+                # this is possible, because we use waiting times as rewards, and those
+                #  are always zero when no time elapses
+                avg_observed_reward = 0
             combined = (
                 self.observation_weight
                 * normalize_reward(avg_observed_reward, NORM_FACTOR)
@@ -163,7 +177,9 @@ class MCTS:
         )
         current_env.step(elevator_action)
 
-        value = self.search(current_env, prev_reward, step_depth=step_depth + 1)
+        value = self.search(
+            current_env, prev_reward, simulation_start_time=simulation_start_time
+        )
 
         if (state, action) in self.action_value:
             self.action_value[(state, action)] = (
