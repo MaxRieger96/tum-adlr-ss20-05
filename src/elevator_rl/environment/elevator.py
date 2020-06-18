@@ -16,6 +16,7 @@ MOVE_TIME = 2.0  # TODO find a good time values
 ENTER_TIME = 1.0
 DOOR_OPEN_TIME = 1.0
 IDLE_TIME = 10.0  # TODO decide if we want to have the option to idle
+# TODO decide whether we should use the same time for all actions
 
 
 class ElevatorActionEnum(Enum):
