@@ -6,7 +6,7 @@ from elevator_rl.environment.elevator import ElevatorEnvAction
 from elevator_rl.environment.elevator_env import ElevatorActionEnum
 from elevator_rl.environment.elevator_env import ElevatorEnv
 from elevator_rl.environment.episode_summary import combine_summaries
-from elevator_rl.environment.example_houses import get_simple_house
+from elevator_rl.environment.example_houses import get_5_story_house
 
 
 class RandomPolicy:
@@ -24,8 +24,9 @@ class RandomPolicy:
 
 def main():
     summaries = []
-    for _ in range(100):
-        house = get_simple_house()
+    for i in range(100):
+        print(i)
+        house = get_5_story_house()
 
         env = ElevatorEnv(house)
         # env.render()
@@ -43,7 +44,9 @@ def main():
         print(env.get_summary())
         summaries.append(env.get_summary())
 
-    print(combine_summaries(summaries))
+    avg, stddev = combine_summaries(summaries)
+    print(avg)
+    print(stddev)
 
 
 if __name__ == "__main__":
