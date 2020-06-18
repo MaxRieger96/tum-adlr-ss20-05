@@ -68,8 +68,8 @@ class ElevatorEnv:
     def get_observation(self):
         return Observation(self.house, self.next_elevator)
 
-    def render(self, method: str = None, step: int = None):
-        render(self.house, method, step)
+    def render(self, method: str = None, prev_time: float = None, action: ElevatorEnvAction = None):
+        render(self.house, method, prev_time, action)
 
     def is_end_of_day(self):
         return self.house.elevators[self.next_elevator].time > EPISODE_TIME_LENGTH
