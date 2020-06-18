@@ -34,12 +34,12 @@ def main():
         step = 0
         while not env.is_end_of_day():
             random_action = random_policy.get_action(env)
-            env.step(
-                ElevatorEnvAction(env.next_elevator, ElevatorActionEnum(random_action))
-            )
+            prev_time = env.house.time
+            action = ElevatorEnvAction(env.next_elevator, ElevatorActionEnum(random_action))
+            env.step(action)
             step += 1
-            # env.render()
-            # env.render(method="file", step=step)
+            #env.render()
+            env.render(method="file", prev_time=prev_time, action=action)
         # print("Total reward at the end of day: {}".format(env.reward_acc))
         print(env.get_summary())
         summaries.append(env.get_summary())
