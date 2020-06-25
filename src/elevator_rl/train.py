@@ -16,7 +16,9 @@ stream = open("config_default.yaml", "r", encoding="utf-8")
 config = yaml.load(stream, Loader=yaml.FullLoader)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 EPISODES_PER_ITERATION = 10  # TODO move this to config
+UPDATE_RANK = True  # TODO move this to config
 
+# TODO nothing in this module works yet!
 
 def train(
     model: NNModel,
@@ -47,7 +49,7 @@ def train(
             obs, pi, total_reward = sample
             obs_vec.append(obs)
             pi_vec.append(pi)
-            if True:  # TODO: if update_rank:
+            if UPDATE_RANK:
                 assert (
                     ranked_reward_buffer is not None
                 ), "rank can only be updated when ranked reward is used"
@@ -93,7 +95,7 @@ def main():
     house = get_simple_house()
 
     env = ElevatorEnv(house)
-    env.render(method="matplotlib", step=0)
+    env.render(method="matplotlib")
 
     replay_buffer = ReplayBuffer(capacity=config["replay_buffer"]["size"])
     ranked_reward_buffer = RankedRewardBuffer(
@@ -102,13 +104,13 @@ def main():
     )
     generator = Generator(env, ranked_reward_buffer=None)  # TODO make optional
     model = NNModel(
-        input_dims=env.get_observation().as_array().shape[0],
-        outputs=ElevatorActionEnum.count(),
+        house_observation_dims=env.get_observation().as_array()[0].shape[0],
+        elevator_observation_dims=env.get_observation().as_array()[1].shape[0],
+        policy_dims=ElevatorActionEnum.count(),
     )
     iteration_start = 0
     for i in range(iteration_start, config["train"]["iterations"]):
         print(f"iteration {i}: sampling started")
-        # TODO generate more than one episode per step
         for _ in range(EPISODES_PER_ITERATION):
             observations, pis, total_reward, summary = generator.perform_episode(
                 mcts_samples=config["mcts"]["samples"],

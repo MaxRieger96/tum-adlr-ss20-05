@@ -4,8 +4,11 @@ from typing import Tuple
 
 import numpy as np
 
+from elevator_rl.environment.observation import ObservationType
+
 # sample: (observation, pi, z)
-Sample = Tuple[np.ndarray, np.ndarray, float]
+
+Sample = Tuple[ObservationType, np.ndarray, float]
 
 
 class ReplayBuffer:

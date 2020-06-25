@@ -15,6 +15,7 @@ from elevator_rl.environment.elevator_env import ElevatorActionEnum
 from elevator_rl.environment.elevator_env import ElevatorEnv
 from elevator_rl.environment.elevator_env import ElevatorEnvAction
 from elevator_rl.environment.episode_summary import Summary
+from elevator_rl.environment.observation import ObservationType
 
 
 class Generator:
@@ -42,7 +43,7 @@ class Generator:
         mcts_cpuct: int,
         mcts_observation_weight: float,
         model: Model,
-    ) -> Tuple[List[np.ndarray], List[np.ndarray], int, Summary]:
+    ) -> Tuple[List[ObservationType], List[np.ndarray], int, Summary]:
         current_env = deepcopy(self.env)
         pis = []
         observations = [current_env.get_observation().as_array()]
