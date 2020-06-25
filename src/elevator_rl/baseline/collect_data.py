@@ -6,7 +6,8 @@ from elevator_rl.alphazero.sample_generator import EpisodeFactory
 from elevator_rl.alphazero.sample_generator import Generator
 from elevator_rl.baseline.random_policy import RandomPolicy
 from elevator_rl.baseline.uniform_model import UniformModel
-from elevator_rl.environment.elevator import ElevatorEnvAction, ElevatorActionEnum
+from elevator_rl.environment.elevator import ElevatorActionEnum
+from elevator_rl.environment.elevator import ElevatorEnvAction
 from elevator_rl.environment.elevator_env import ElevatorEnv
 from elevator_rl.environment.episode_summary import combine_summaries
 from elevator_rl.environment.example_houses import produce_house

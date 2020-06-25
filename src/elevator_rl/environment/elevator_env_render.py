@@ -4,9 +4,9 @@ from typing import List
 
 import matplotlib.pyplot as plt
 import numpy as np
-from elevator_rl.environment.elevator import ElevatorEnvAction
 from matplotlib.patches import Polygon
 
+from elevator_rl.environment.elevator import ElevatorEnvAction
 from elevator_rl.environment.house import House
 
 # TODO center all texts
@@ -44,7 +44,7 @@ def draw_rectangle(x: float, y: float, color: str):
 
 
 def draw_elevator(
-        idx: int, floor: int, stop_requests: List[int], nr_of_passengers: int, height: int
+    idx: int, floor: int, stop_requests: List[int], nr_of_passengers: int, height: int
 ):
     # elevator shaft
     rectangle = plt.Rectangle(
@@ -65,7 +65,7 @@ def draw_elevator(
         idx * ELEVATOR_SPACING + 0.42 * ELEVATOR_WIDTH,
         floor * FLOOR_HEIGHT + 0.4 * ELEVATOR_HEIGHT,
         nr_of_passengers,
-        fontdict={'weight': 'bold'},
+        fontdict={"weight": "bold"},
         color="#ffffff",
     )
 
@@ -82,23 +82,29 @@ def draw_elevator(
         plt.gca().add_patch(circle)
 
 
-def draw_passenger_request(floor: int, direction: RequestDirection, time: float, method: str):
+def draw_passenger_request(
+    floor: int, direction: RequestDirection, time: float, method: str
+):
     if direction == RequestDirection.DOWN:
         triangle_down(floor, "r")
         if method != "file":
-            plt.text(-50, 45 + FLOOR_HEIGHT * floor, f"{time:.1f}")  # TODO better text pos
+            plt.text(
+                -50, 45 + FLOOR_HEIGHT * floor, f"{time:.1f}"
+            )  # TODO better text pos
     else:
         triangle_up(floor, "g")
         if method != "file":
-            plt.text(-50, 50 + FLOOR_HEIGHT * floor, f"{time:.1f}")  # TODO better text pos
+            plt.text(
+                -50, 50 + FLOOR_HEIGHT * floor, f"{time:.1f}"
+            )  # TODO better text pos
 
 
 def render(house: House, method: str, prev_time: float, action: ElevatorEnvAction):
     method = method if method in ["matplotlib", "file"] else "matplotlib"
     width = len(house.elevators) * ELEVATOR_SPACING
     height = house.number_of_floors * FLOOR_HEIGHT
-    font = {'size': 22}
-    plt.rc('font', **font)
+    font = {"size": 22}
+    plt.rc("font", **font)
     plt.axes()
     plt.gcf().set_size_inches(10, 10)
     floors = list(range(0, house.number_of_floors * FLOOR_HEIGHT, FLOOR_HEIGHT))
@@ -119,17 +125,21 @@ def render(house: House, method: str, prev_time: float, action: ElevatorEnvActio
     # highlight next elevator
     if method != "file":
         draw_rectangle(
-            house.next_to_move() * ELEVATOR_SPACING + 0.5 * ELEVATOR_WIDTH, -25, "#ff9900"
+            house.next_to_move() * ELEVATOR_SPACING + 0.5 * ELEVATOR_WIDTH,
+            -25,
+            "#ff9900",
         )
 
     # Display action took
     if action:
-        plt.text(action.elevator_idx * ELEVATOR_SPACING + 0.5 * ELEVATOR_WIDTH,
-                 -50,
-                 action.elevator_action.name,
-                 fontdict={'weight': 'bold'},
-                 horizontalalignment="center",
-                 verticalalignment="center")
+        plt.text(
+            action.elevator_idx * ELEVATOR_SPACING + 0.5 * ELEVATOR_WIDTH,
+            -50,
+            action.elevator_action.name,
+            fontdict={"weight": "bold"},
+            horizontalalignment="center",
+            verticalalignment="center",
+        )
 
     # display elevator numbers and times
     for i in range(0, len(house.elevators)):
@@ -192,6 +202,8 @@ def render(house: House, method: str, prev_time: float, action: ElevatorEnvActio
         start_time = int(prev_time)
         stop_time = int(house.time)
         for time in range(start_time, stop_time):
-            plt.savefig("{}/step_{}.png".format(os.path.join(ROOT_DIR, "../plots"), time))
+            plt.savefig(
+                "{}/step_{}.png".format(os.path.join(ROOT_DIR, "../plots"), time)
+            )
         plt.show()
         plt.close()

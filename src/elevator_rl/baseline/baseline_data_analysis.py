@@ -1,8 +1,56 @@
 import os
 import pickle
+
 from matplotlib import pyplot as plt
 
 from elevator_rl.environment.episode_summary import combine_summaries
+
+
+def get_mcts_count(filename: str) -> int:
+    if "mcts0_" in filename:
+        return 0
+    elif "mcts10_" in filename:
+        return 10
+    elif "mcts20_" in filename:
+        return 20
+    elif "mcts50_" in filename:
+        return 50
+    elif "mcts100_" in filename:
+        return 100
+    elif "mcts200_" in filename:
+        return 200
+    else:
+        raise ValueError("unknown file name format: " + filename)
+
+
+def get_floor_count(filename: str) -> int:
+    if "floors3_" in filename:
+        return 3
+    elif "floors4_" in filename:
+        return 4
+    elif "floors5_" in filename:
+        return 5
+    elif "floors6_" in filename:
+        return 6
+    elif "floors7_" in filename:
+        return 7
+    elif "floors8_" in filename:
+        return 8
+    elif "floors9_" in filename:
+        return 9
+    elif "floors10_" in filename:
+        return 10
+    else:
+        raise ValueError("unknown file name format: " + filename)
+
+
+def get_elevator_count(filename: str) -> int:
+    if "elevs1" in filename:
+        return 1
+    elif "elevs2" in filename:
+        return 2
+    else:
+        raise ValueError("unknown file name format: " + filename)
 
 
 def main():
@@ -19,47 +67,9 @@ def main():
         with open(dir_name + filename, "rb") as handle:
             current_summaries = pickle.load(handle)
 
-        if "mcts0_" in filename:
-            mcts = 0
-        elif "mcts10_" in filename:
-            mcts = 10
-        elif "mcts20_" in filename:
-            mcts = 20
-        elif "mcts50_" in filename:
-            mcts = 50
-        elif "mcts100_" in filename:
-            mcts = 100
-        elif "mcts200_" in filename:
-            mcts = 200
-        else:
-            raise ValueError("unknown file name format: " + filename)
-
-        if "floors3_" in filename:
-            floors = 3
-        elif "floors4_" in filename:
-            floors = 4
-        elif "floors5_" in filename:
-            floors = 5
-        elif "floors6_" in filename:
-            floors = 6
-        elif "floors7_" in filename:
-            floors = 7
-        elif "floors8_" in filename:
-            floors = 8
-        elif "floors9_" in filename:
-            floors = 9
-        elif "floors10_" in filename:
-            floors = 10
-        else:
-            raise ValueError("unknown file name format: " + filename)
-
-        if "elevs1" in filename:
-            elevs = 1
-        elif "elevs2" in filename:
-            elevs = 2
-        else:
-            raise ValueError("unknown file name format: " + filename)
-        # print(current_summaries[0])
+        mcts = get_mcts_count(filename)
+        floors = get_floor_count(filename)
+        elevs = get_elevator_count(filename)
 
         summarydict[floors][elevs][mcts] = current_summaries
     print("done reading")
@@ -91,7 +101,7 @@ def plot(summarydict, elevs, value_extractor, y_axis):
     axes.set_ylabel(y_axis)
     plt.title(f"houses with {elevs} elevator(s)")
     plt.legend()
-    plt.savefig(f"{elevs}_elevs_{y_axis}.png",dpi=400)
+    plt.savefig(f"{elevs}_elevs_{y_axis}.png", dpi=400)
 
 
 if __name__ == "__main__":
