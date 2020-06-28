@@ -1,6 +1,10 @@
+import os
+from os import path
+
 import numpy as np
 import torch
 import yaml
+from elevator_rl.yparams import YParams
 from torch.nn.functional import mse_loss
 from torch.optim import Adam
 
@@ -11,12 +15,17 @@ from elevator_rl.alphazero.sample_generator import Generator
 from elevator_rl.environment.elevator import ElevatorActionEnum
 from elevator_rl.environment.elevator_env import ElevatorEnv
 from elevator_rl.environment.example_houses import get_simple_house
+from torch.utils.tensorboard import SummaryWriter
+from datetime import datetime
 
 stream = open("config_default.yaml", "r", encoding="utf-8")
-config = yaml.load(stream, Loader=yaml.FullLoader)
+config_name = (
+    os.environ["CONFIG_NAME"] if "CONFIG_NAME" in os.environ else "default"
+)
+yparams = YParams('config.yaml', config_name)
+config = yparams.hparams
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-EPISODES_PER_ITERATION = 10  # TODO move this to config
-UPDATE_RANK = True  # TODO move this to config
+run_name = f'{datetime.now().strftime("%Y-%m-%d_%H:%M:%S")}_{config_name}'
 
 # TODO nothing in this module works yet!
 
@@ -49,7 +58,7 @@ def train(
             obs, pi, total_reward = sample
             obs_vec.append(obs)
             pi_vec.append(pi)
-            if UPDATE_RANK:
+            if config["ranked_reward"]["update_rank"]:
                 assert (
                     ranked_reward_buffer is not None
                 ), "rank can only be updated when ranked reward is used"
@@ -92,6 +101,8 @@ def train(
 
 
 def main():
+    writer = SummaryWriter(path.join(config["path"], run_name))
+    writer.add_hparams(yparams.flatten(yparams.hparams), metric_dict={})
     house = get_simple_house()
 
     env = ElevatorEnv(house)
@@ -111,7 +122,7 @@ def main():
     iteration_start = 0
     for i in range(iteration_start, config["train"]["iterations"]):
         print(f"iteration {i}: sampling started")
-        for _ in range(EPISODES_PER_ITERATION):
+        for _ in range(config["train"]["episodes"]):
             observations, pis, total_reward, summary = generator.perform_episode(
                 mcts_samples=config["mcts"]["samples"],
                 mcts_temp=config["mcts"]["temp"],

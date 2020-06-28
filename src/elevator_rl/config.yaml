@@ -1,0 +1,27 @@
+default: &DEFAULT
+  path: "../../runs"
+  mcts:
+    samples: 20
+    temp: 1.0
+    cpuct: 4
+    observation_weight: 0.0
+  replay_buffer:
+    size: 3000
+  train:
+    iterations: 10
+    episodes: 10
+    samples_per_iteration: 1280
+    lr: 0.001 #1e-3
+    weight_decay: 0.0001 #1e-4
+    policy_loss_factor: 1.0
+    value_loss_factor: 1.0
+    batch_size: 16
+  ranked_reward:
+    size: 250
+    threshold: 0.75
+    update_rank: True
+
+many_samples:
+  <<: *DEFAULT
+  mcts:
+    samples: 3000
