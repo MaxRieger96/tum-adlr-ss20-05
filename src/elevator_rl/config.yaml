@@ -4,7 +4,7 @@ default: &DEFAULT
     samples: 20
     temp: 1.0
     cpuct: 4
-    observation_weight: 0.0
+    observation_weight: 0.5
   replay_buffer:
     size: 3000
   train:
@@ -16,6 +16,7 @@ default: &DEFAULT
     policy_loss_factor: 1.0
     value_loss_factor: 1.0
     batch_size: 16
+    n_processes: 8
   ranked_reward:
     size: 250
     threshold: 0.75

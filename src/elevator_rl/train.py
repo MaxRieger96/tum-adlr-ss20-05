@@ -1,21 +1,22 @@
 import os
+from datetime import datetime
 from os import path
 
 import numpy as np
 import torch
-from elevator_rl.yparams import YParams
 from torch.nn.functional import mse_loss
 from torch.optim import Adam
+from torch.utils.tensorboard import SummaryWriter
 
 from elevator_rl.alphazero.model import NNModel
 from elevator_rl.alphazero.ranked_reward import RankedRewardBuffer
 from elevator_rl.alphazero.replay_buffer import ReplayBuffer
+from elevator_rl.alphazero.sample_generator import EpisodeFactory
 from elevator_rl.alphazero.sample_generator import Generator
 from elevator_rl.environment.elevator import ElevatorActionEnum
 from elevator_rl.environment.elevator_env import ElevatorEnv
 from elevator_rl.environment.example_houses import get_simple_house
-from torch.utils.tensorboard import SummaryWriter
-from datetime import datetime
+from elevator_rl.yparams import YParams
 
 config_name = os.environ["CONFIG_NAME"] if "CONFIG_NAME" in os.environ else "default"
 yparams = YParams("config.yaml", config_name)
@@ -115,24 +116,29 @@ def main():
         capacity=config["ranked_reward"]["size"],
         threshold=config["ranked_reward"]["threshold"],
     )
-    # TODO use parallel factory
-    generator = Generator(env, ranked_reward_buffer=None)  # TODO make optional
+
+    generator = Generator(env, ranked_reward_buffer)
+    factory = EpisodeFactory(generator)
     model = NNModel(
         house_observation_dims=env.get_observation().as_array()[0].shape[0],
         elevator_observation_dims=env.get_observation().as_array()[1].shape[0],
         policy_dims=ElevatorActionEnum.count(),
     )
+
     iteration_start = 0
     for i in range(iteration_start, config["train"]["iterations"]):
         print(f"iteration {i}: sampling started")
-        for _ in range(config["train"]["episodes"]):
-            observations, pis, total_reward, summary = generator.perform_episode(
-                mcts_samples=config["mcts"]["samples"],
-                mcts_temp=config["mcts"]["temp"],
-                mcts_cpuct=config["mcts"]["cpuct"],
-                mcts_observation_weight=config["mcts"]["observation_weight"],
-                model=model,
-            )
+        episodes = factory.create_episodes(
+            n_episodes=config["train"]["episodes"],
+            n_processes=config["train"]["n_processes"],
+            mcts_samples=config["mcts"]["samples"],
+            mcts_temp=config["mcts"]["temp"],
+            mcts_cpuct=config["mcts"]["cpuct"],
+            mcts_observation_weight=config["mcts"]["observation_weight"],
+            model=model,
+        )
+        for e in episodes:
+            observations, pis, total_reward, summary = e
             for j, pi in enumerate(pis):
                 sample = (observations[j], pi, total_reward)
                 replay_buffer.push(sample)

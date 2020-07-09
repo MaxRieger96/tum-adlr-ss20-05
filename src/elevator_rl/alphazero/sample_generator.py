@@ -7,6 +7,7 @@ import numpy as np
 import torch
 from torch.distributions import Categorical
 from torch.multiprocessing import Pool
+from torch.multiprocessing import set_start_method
 
 from elevator_rl.alphazero.mcts import MCTS
 from elevator_rl.alphazero.model import Model
@@ -16,6 +17,12 @@ from elevator_rl.environment.elevator_env import ElevatorEnv
 from elevator_rl.environment.elevator_env import ElevatorEnvAction
 from elevator_rl.environment.episode_summary import Summary
 from elevator_rl.environment.observation import ObservationType
+
+
+try:
+    set_start_method("spawn")
+except RuntimeError:
+    pass
 
 
 class Generator:

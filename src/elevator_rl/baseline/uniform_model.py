@@ -40,7 +40,7 @@ def main():
     house = get_simple_house()
 
     env = ElevatorEnv(house)
-    env.render(method="matplotlib", step=0)
+    env.render(method="matplotlib")
     generator = Generator(env, ranked_reward_buffer=None)  # TODO use configs
 
     factory = EpisodeFactory(generator)

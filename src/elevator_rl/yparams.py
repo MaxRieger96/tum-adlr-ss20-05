@@ -10,7 +10,7 @@ class YParams:
             for k, v in YAML().load(fp)[config_name].items():
                 self.hparams[k] = v
 
-    def flatten(self, d, parent_key='', sep='_'):
+    def flatten(self, d, parent_key="", sep="_"):
         items = []
         for k, v in d.items():
             new_key = parent_key + sep + k if parent_key else k

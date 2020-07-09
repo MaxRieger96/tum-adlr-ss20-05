@@ -1,13 +1,13 @@
 from abc import ABC
 from abc import abstractmethod
-from typing import List
 from typing import Tuple
 
 import numpy as np
 import torch
-from torch import Tensor
 from torch import relu
-from torch.nn import Linear, BatchNorm1d
+from torch import Tensor
+from torch.nn import BatchNorm1d
+from torch.nn import Linear
 from torch.nn import Module
 from torch.nn.functional import softmax
 
