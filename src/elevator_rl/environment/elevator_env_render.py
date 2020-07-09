@@ -99,7 +99,7 @@ def draw_passenger_request(
             )  # TODO better text pos
 
 
-def render(house: House, method: str, prev_time: float, action: ElevatorEnvAction):
+def render(house: House, method: str, path: str, prev_time: float, action: ElevatorEnvAction):
     method = method if method in ["matplotlib", "file"] else "matplotlib"
     width = len(house.elevators) * ELEVATOR_SPACING
     height = house.number_of_floors * FLOOR_HEIGHT
@@ -197,13 +197,11 @@ def render(house: House, method: str, prev_time: float, action: ElevatorEnvActio
     if method == "matplotlib":
         plt.show()
     else:
-        ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
-
         start_time = int(prev_time)
         stop_time = int(house.time)
         for time in range(start_time, stop_time):
             plt.savefig(
-                "{}/step_{}.png".format(os.path.join(ROOT_DIR, "../plots"), time)
+                "{}/step_{}.png".format(path, time)
             )
-        plt.show()
+        # plt.show()
         plt.close()

@@ -4,7 +4,10 @@ from typing import Optional
 from typing import Tuple
 
 import numpy as np
+import os
+from pathlib import Path
 import torch
+import subprocess
 from torch.distributions import Categorical
 from torch.multiprocessing import Pool
 from torch.multiprocessing import set_start_method
@@ -18,7 +21,6 @@ from elevator_rl.environment.elevator_env import ElevatorEnvAction
 from elevator_rl.environment.episode_summary import Summary
 from elevator_rl.environment.observation import ObservationType
 
-
 try:
     set_start_method("spawn")
 except RuntimeError:
@@ -30,7 +32,7 @@ class Generator:
     ranked_reward_buffer: RankedRewardBuffer
 
     def __init__(
-        self, env: ElevatorEnv, ranked_reward_buffer: Optional[RankedRewardBuffer],
+            self, env: ElevatorEnv, ranked_reward_buffer: Optional[RankedRewardBuffer],
     ):
         self.env = env
         self.ranked_reward_buffer = ranked_reward_buffer
@@ -42,12 +44,15 @@ class Generator:
         return action.numpy().flatten()[0]
 
     def perform_episode(
-        self,
-        mcts_samples: int,
-        mcts_temp: float,
-        mcts_cpuct: int,
-        mcts_observation_weight: float,
-        model: Model,
+            self,
+            mcts_samples: int,
+            mcts_temp: float,
+            mcts_cpuct: int,
+            mcts_observation_weight: float,
+            model: Model,
+            render: bool = False,
+            iteration: int = None,
+            run_name: str = None
     ) -> Tuple[List[ObservationType], List[np.ndarray], int, Summary]:
         current_env = deepcopy(self.env)
         pis = []
@@ -63,22 +68,31 @@ class Generator:
             )
 
             probs = mcts.get_action_probabilities(current_env, mcts_temp)
-            # TODO remove these debugging prints:
-            #  current_env.render()
-            #  print(probs)
             probs = np.array(probs, dtype=np.float32)
 
             pis.append(probs)
 
             probs = torch.from_numpy(probs)
+            prev_time = current_env.house.time
             action = ElevatorActionEnum(self.sample_action(probs))
-            obs, reward = current_env.step(
-                ElevatorEnvAction(current_env.next_elevator, action)
-            )
+            env_action = ElevatorEnvAction(current_env.next_elevator, action)
+            obs, reward = current_env.step(env_action)
             observations.append(obs.as_array())
             total_reward += reward
 
+            if render:
+                root_dir = os.path.dirname(os.path.abspath(__file__))
+                path = os.path.join(root_dir,
+                                    "{}/../plots/run_{}/iteration{}".format(root_dir,
+                                                                            run_name,
+                                                                            iteration))
+                Path(path).mkdir(parents=True, exist_ok=True)
+                current_env.render(method="file", prev_time=prev_time, path=path,
+                                   action=env_action)
+
         print(".", end="", flush=True)
+        if render:
+            subprocess.Popen(["./animate.sh", "-run_name", "some.file", "-iteration", ""])
         return observations, pis, total_reward, current_env.get_summary()
 
 
@@ -87,16 +101,15 @@ class EpisodeFactory:
         self._generator: Generator = generator
 
     def create_episodes(
-        self,
-        n_episodes: int,
-        n_processes: int,
-        mcts_samples: int,
-        mcts_temp: float,
-        mcts_cpuct: int,
-        mcts_observation_weight: float,
-        model: Model,
+            self,
+            n_episodes: int,
+            n_processes: int,
+            mcts_samples: int,
+            mcts_temp: float,
+            mcts_cpuct: int,
+            mcts_observation_weight: float,
+            model: Model,
     ):
-
         pool = Pool(n_processes)
         res = pool.starmap(
             self._generator.perform_episode,

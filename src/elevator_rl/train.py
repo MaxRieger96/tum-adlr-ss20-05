@@ -1,9 +1,11 @@
 import os
+from copy import deepcopy
 from datetime import datetime
 from os import path
 
 import numpy as np
 import torch
+from torch.multiprocessing import Process
 from torch.nn.functional import mse_loss
 from torch.optim import Adam
 from torch.utils.tensorboard import SummaryWriter
@@ -150,6 +152,18 @@ def main():
             for j, pi in enumerate(pis):
                 sample = (observations[j], pi, total_reward)
                 replay_buffer.push(sample)
+
+        if i % 10 == 0:
+            # Visualization Process outputting a video for each iteration
+            p = Process(target=generator.perform_episode, args=(config["mcts"]["samples"],
+                                                                config["mcts"]["temp"],
+                                                                config["mcts"]["cpuct"],
+                                                                config["mcts"]["observation_weight"],
+                                                                deepcopy(model),
+                                                                True,
+                                                                i,
+                                                                run_name))
+            p.start()
 
         # TRAIN model
         logs = train(model, replay_buffer, ranked_reward_buffer, i * batch_count)
