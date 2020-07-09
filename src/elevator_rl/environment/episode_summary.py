@@ -1,4 +1,5 @@
 from statistics import stdev
+from typing import Callable, Iterable
 from typing import List
 from typing import Tuple
 from typing import TYPE_CHECKING
@@ -13,16 +14,20 @@ class Summary:
         nr_passengers_transported: float,
         nr_passengers_waiting: float,
         avg_waiting_time_transported: float,
+        avg_waiting_time_per_person: float,
         elapsed_time: float,
         accumulated_reward: float,
         quadratic_waiting_time: float,
+        waiting_time: float,
     ):
         self.nr_passengers_transported: float = nr_passengers_transported
         self.nr_passengers_waiting: float = nr_passengers_waiting
         self.avg_waiting_time_transported: float = avg_waiting_time_transported
+        self.avg_waiting_time_per_person: float = avg_waiting_time_per_person
         self.elapsed_time: float = elapsed_time
         self.accumulated_reward: float = accumulated_reward
         self.quadratic_waiting_time: float = quadratic_waiting_time
+        self.waiting_time: float = waiting_time
 
     def __str__(self):
         return (
@@ -37,6 +42,7 @@ class Summary:
         )
 
     def percent_transported(self) -> float:
+        # TODO remove this, summary should be a pure data class
         return self.nr_passengers_transported / (
             self.nr_passengers_transported + self.nr_passengers_waiting
         )
@@ -60,49 +66,64 @@ def get_summary(env: "ElevatorEnv") -> Summary:
     TODO add more relevant info
     :return: nr_passengers_transported, nr_passengers_waiting
     """
-    if len(env.transported_passenger_times) > 0:
-        avg_waiting_time_transported = sum(env.transported_passenger_times) / len(
-            env.transported_passenger_times
+    nr_transported = len(env.transported_passenger_times)
+
+    if nr_transported > 0:
+        avg_waiting_time_transported = (
+            sum(env.transported_passenger_times) / nr_transported
         )
     else:
         avg_waiting_time_transported = 0
+
+    total_passengers = len(
+        env.transported_passenger_times
+    ) + env.house.get_expected_passenger_count(env.house.time)
+
+    still_waiting_waiting_times = (
+        env.house.get_waiting_time_for_all_waiting_passengers()
+    )
+
+    avg_waiting_time_per_person = (
+        avg_waiting_time_transported * nr_transported + sum(still_waiting_waiting_times)
+    ) / total_passengers
+
     return Summary(
-        nr_passengers_transported=len(env.transported_passenger_times),
+        nr_passengers_transported=nr_transported,
         nr_passengers_waiting=env.house.get_expected_passenger_count(env.house.time),
         avg_waiting_time_transported=avg_waiting_time_transported,
+        avg_waiting_time_per_person=avg_waiting_time_per_person,
         elapsed_time=env.house.time,
         accumulated_reward=env.reward_acc,
         quadratic_waiting_time=env.get_quadratic_total_waiting_time(),
+        waiting_time=env.get_total_waiting_time(),
     )
 
 
 def combine_summaries(summaries: List[Summary]) -> Tuple[Summary, Summary]:
-    n = len(summaries)
     return (
-        Summary(
-            nr_passengers_transported=sum(
-                s.nr_passengers_transported for s in summaries
-            )
-            / n,
-            nr_passengers_waiting=sum(s.nr_passengers_waiting for s in summaries) / n,
-            avg_waiting_time_transported=sum(
-                s.avg_waiting_time_transported for s in summaries
-            )
-            / n,
-            elapsed_time=sum(s.elapsed_time for s in summaries) / n,
-            accumulated_reward=sum(s.accumulated_reward for s in summaries) / n,
-            quadratic_waiting_time=sum(s.quadratic_waiting_time for s in summaries) / n,
+        accumulate_summaries(summaries, lambda x: sum(x) / len(x)),
+        accumulate_summaries(summaries, lambda x: stdev(x)),
+    )
+
+
+def accumulate_summaries(
+    summaries: List[Summary], accumulator: Callable[[List[float]], float]
+) -> Summary:
+    return Summary(
+        nr_passengers_transported=accumulator(
+            [s.nr_passengers_transported for s in summaries]
         ),
-        SummaryStdDev(
-            nr_passengers_transported=stdev(
-                s.nr_passengers_transported for s in summaries
-            ),
-            nr_passengers_waiting=stdev(s.nr_passengers_waiting for s in summaries),
-            avg_waiting_time_transported=stdev(
-                s.avg_waiting_time_transported for s in summaries
-            ),
-            elapsed_time=stdev(s.elapsed_time for s in summaries),
-            accumulated_reward=stdev(s.accumulated_reward for s in summaries),
-            quadratic_waiting_time=stdev(s.quadratic_waiting_time for s in summaries),
+        nr_passengers_waiting=accumulator([s.nr_passengers_waiting for s in summaries]),
+        avg_waiting_time_transported=accumulator(
+            [s.avg_waiting_time_transported for s in summaries]
         ),
+        avg_waiting_time_per_person=accumulator(
+            [s.avg_waiting_time_per_person for s in summaries]
+        ),
+        elapsed_time=accumulator([s.elapsed_time for s in summaries]),
+        accumulated_reward=accumulator([s.accumulated_reward for s in summaries]),
+        quadratic_waiting_time=accumulator(
+            [s.quadratic_waiting_time for s in summaries]
+        ),
+        waiting_time=accumulator([s.waiting_time for s in summaries]),
     )

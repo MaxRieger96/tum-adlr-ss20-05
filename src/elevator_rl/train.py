@@ -2,6 +2,7 @@ import os
 from copy import deepcopy
 from datetime import datetime
 from os import path
+from typing import List
 
 import numpy as np
 import torch
@@ -18,7 +19,8 @@ from elevator_rl.alphazero.sample_generator import EpisodeFactory
 from elevator_rl.alphazero.sample_generator import Generator
 from elevator_rl.environment.elevator import ElevatorActionEnum
 from elevator_rl.environment.elevator_env import ElevatorEnv
-from elevator_rl.environment.example_houses import get_simple_house
+from elevator_rl.environment.episode_summary import Summary, accumulate_summaries
+from elevator_rl.environment.example_houses import produce_house
 from elevator_rl.yparams import YParams
 
 config_name = os.environ["CONFIG_NAME"] if "CONFIG_NAME" in os.environ else "default"
@@ -112,11 +114,55 @@ def write_hparams(writer: SummaryWriter):
     writer.file_writer.add_summary(sei)
 
 
+def write_episode_summary(
+    writer: SummaryWriter, summary: Summary, index: int, name: str
+):
+    name = name + "_"
+    writer.add_scalar(
+        name + "quadratic_waiting_time", summary.quadratic_waiting_time, index
+    )
+    writer.add_scalar(name + "waiting_time", summary.waiting_time, index)
+    writer.add_scalar(
+        name + "percent_transported", summary.percent_transported(), index
+    )
+    writer.add_scalar(
+        name + "avg_waiting_time_transported",
+        summary.avg_waiting_time_transported,
+        index,
+    )
+    writer.add_scalar(
+        name + "avg_waiting_time_per_person",
+        summary.avg_waiting_time_per_person,
+        index,
+    )
+    writer.add_scalar(name + "nr_waiting", summary.nr_passengers_waiting, index)
+    writer.add_scalar(name + "nr_transported", summary.nr_passengers_transported, index)
+
+
+def write_episode_summaries(
+    writer: SummaryWriter, summaries: List[Summary], index: int
+):
+    # TODO make this nice in tensorboard using custom scalars
+    #  https://stackoverflow.com/questions/37146614/tensorboard-plot-training-and-validation-losses-on-the-same-graph
+    for name, accumulator in {
+        "avg": lambda x: sum(x) / len(x),
+        "max": lambda x: max(x),
+        "min": lambda x: min(x),
+    }.items():
+        write_episode_summary(
+            writer, accumulate_summaries(summaries, accumulator), index, name
+        )
+
+
 def main():
     writer = SummaryWriter(path.join(config["path"], run_name))
     write_hparams(writer=writer)
 
-    house = get_simple_house()
+    house = produce_house(
+        elevator_capacity=config["house"]["elevator_capacity"],
+        number_of_elevators=config["house"]["number_of_elevators"],
+        number_of_floors=config["house"]["number_of_floors"],
+    )
 
     env = ElevatorEnv(house)
     env.render(method="matplotlib")
@@ -137,7 +183,9 @@ def main():
 
     iteration_start = 0
     for i in range(iteration_start, config["train"]["iterations"]):
-        print(f"iteration {i}: sampling started")
+
+        print(f"\niteration {i}: sampling started")
+
         episodes = factory.create_episodes(
             n_episodes=config["train"]["episodes"],
             n_processes=config["train"]["n_processes"],
@@ -147,11 +195,17 @@ def main():
             mcts_observation_weight=config["mcts"]["observation_weight"],
             model=model,
         )
-        for e in episodes:
+
+        summaries = []
+        for episode_index, e in enumerate(episodes):
+            assert len(episodes) < batch_count, "the tensorboard indices make no sense"
             observations, pis, total_reward, summary = e
             for j, pi in enumerate(pis):
                 sample = (observations[j], pi, total_reward)
                 replay_buffer.push(sample)
+            summaries.append(summary)
+
+        write_episode_summaries(writer, summaries, i * batch_count)
 
         if i % 10 == 0:
             # Visualization Process outputting a video for each iteration
