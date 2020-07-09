@@ -1,6 +1,6 @@
 default: &DEFAULT
   path: "../../runs"
-  visualize_iterations: False
+  visualize_iterations: True
   mcts:
     samples: 20
     temp: 1.0
@@ -9,7 +9,7 @@ default: &DEFAULT
   replay_buffer:
     size: 3000
   train:
-    iterations: 100
+    iterations: 6
     episodes: 10
     samples_per_iteration: 1280
     lr: 0.001 #1e-3
@@ -22,7 +22,7 @@ default: &DEFAULT
     size: 250
     threshold: 0.75
     update_rank: True
-  house:
+  house: &DEFAULT_HOUSE
     elevator_capacity: 10
     number_of_elevators: 1
     number_of_floors: 3
@@ -31,3 +31,16 @@ many_samples:
   <<: *DEFAULT
   mcts:
     samples: 3000
+
+8stores:
+  <<: *DEFAULT
+  house:
+    <<: *DEFAULT_HOUSE
+    number_of_floors: 8
+
+8stores_2elevators:
+  <<: *DEFAULT
+  house:
+    <<: *DEFAULT_HOUSE
+    number_of_elevators: 2
+    number_of_floors: 8

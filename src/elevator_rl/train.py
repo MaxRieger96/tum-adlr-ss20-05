@@ -2,7 +2,7 @@ import os
 from copy import deepcopy
 from datetime import datetime
 from os import path
-from typing import List
+from typing import List, Dict
 
 import numpy as np
 import torch
@@ -23,25 +23,22 @@ from elevator_rl.environment.episode_summary import Summary, accumulate_summarie
 from elevator_rl.environment.example_houses import produce_house
 from elevator_rl.yparams import YParams
 
-config_name = os.environ["CONFIG_NAME"] if "CONFIG_NAME" in os.environ else "default"
-yparams = YParams("config.yaml", config_name)
-config = yparams.hparams
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-run_name = f'{datetime.now().strftime("%Y-%m-%d_%H:%M:%S")}_{config_name}'
-batch_count = config["train"]["samples_per_iteration"] // config["train"]["batch_size"]
 
 
 def train(
-    model: NNModel,
-    replay_buffer: ReplayBuffer,
-    ranked_reward_buffer: RankedRewardBuffer,
-    offset: int,
+        model: NNModel,
+        replay_buffer: ReplayBuffer,
+        ranked_reward_buffer: RankedRewardBuffer,
+        offset: int,
+        config: Dict
 ):
     optimizer = Adam(
         model.parameters(),
         lr=config["train"]["lr"],
         weight_decay=config["train"]["weight_decay"],
     )
+    batch_count = config["train"]["samples_per_iteration"] // config["train"]["batch_size"]
     model.to(device)
     model.train()
     acc_loss_value = []
@@ -60,7 +57,7 @@ def train(
             pi_vec.append(pi)
             if config["ranked_reward"]["update_rank"]:
                 assert (
-                    ranked_reward_buffer is not None
+                        ranked_reward_buffer is not None
                 ), "rank can only be updated when ranked reward is used"
                 z_vec.append(ranked_reward_buffer.get_ranked_reward(total_reward))
             else:
@@ -85,8 +82,8 @@ def train(
         pred_p, pred_v = model(*obs_vec)
 
         policy_loss = (
-            torch.sum(-pi_vec * torch.log(pred_p + 1e-8))
-            * config["train"]["policy_loss_factor"]
+                torch.sum(-pi_vec * torch.log(pred_p + 1e-8))
+                * config["train"]["policy_loss_factor"]
         )
         value_loss = mse_loss(pred_v, z_vec) * config["train"]["value_loss_factor"]
 
@@ -107,7 +104,7 @@ def train(
     return logs
 
 
-def write_hparams(writer: SummaryWriter):
+def write_hparams(writer: SummaryWriter, yparams: YParams):
     exp, ssi, sei = hparams(yparams.flatten(yparams.hparams), {})
     writer.file_writer.add_summary(exp)
     writer.file_writer.add_summary(ssi)
@@ -115,7 +112,7 @@ def write_hparams(writer: SummaryWriter):
 
 
 def write_episode_summary(
-    writer: SummaryWriter, summary: Summary, index: int, name: str
+        writer: SummaryWriter, summary: Summary, index: int, name: str
 ):
     name = name + "_"
     writer.add_scalar(
@@ -140,7 +137,7 @@ def write_episode_summary(
 
 
 def write_episode_summaries(
-    writer: SummaryWriter, summaries: List[Summary], index: int
+        writer: SummaryWriter, summaries: List[Summary], index: int
 ):
     # TODO make this nice in tensorboard using custom scalars
     #  https://stackoverflow.com/questions/37146614/tensorboard-plot-training-and-validation-losses-on-the-same-graph
@@ -154,10 +151,15 @@ def write_episode_summaries(
         )
 
 
-def main():
-    writer = SummaryWriter(path.join(config["path"], run_name))
-    write_hparams(writer=writer)
+def main(config_name: str):
+    yparams = YParams("config.yaml", config_name)
+    config = yparams.hparams
+    run_name = f'{datetime.now().strftime("%Y-%m-%d_%H:%M:%S")}_{config_name}'
 
+    writer = SummaryWriter(path.join(config["path"], run_name))
+    write_hparams(writer=writer, yparams=yparams)
+
+    batch_count = config["train"]["samples_per_iteration"] // config["train"]["batch_size"]
     house = produce_house(
         elevator_capacity=config["house"]["elevator_capacity"],
         number_of_elevators=config["house"]["number_of_elevators"],
@@ -207,7 +209,7 @@ def main():
 
         write_episode_summaries(writer, summaries, i * batch_count)
 
-        if i > 0 and i % 10 == 0 and config["visualize_iterations"]:
+        if i > 0 and i % 3 == 0 and config["visualize_iterations"]:
             # Visualization Process outputting a video for each iteration
             p = Process(target=generator.perform_episode, args=(config["mcts"]["samples"],
                                                                 config["mcts"]["temp"],
@@ -220,10 +222,10 @@ def main():
             p.start()
 
         # TRAIN model
-        logs = train(model, replay_buffer, ranked_reward_buffer, i * batch_count)
+        logs = train(model, replay_buffer, ranked_reward_buffer, i * batch_count, config)
         for log in logs:
             writer.add_scalar(*log)
 
 
 if __name__ == "__main__":
-    main()
+    main(config_name=os.environ["CONFIG_NAME"] if "CONFIG_NAME" in os.environ else "default")
