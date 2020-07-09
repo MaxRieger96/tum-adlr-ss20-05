@@ -7,6 +7,7 @@ import torch
 from torch.nn.functional import mse_loss
 from torch.optim import Adam
 from torch.utils.tensorboard import SummaryWriter
+from torch.utils.tensorboard.summary import hparams
 
 from elevator_rl.alphazero.model import NNModel
 from elevator_rl.alphazero.ranked_reward import RankedRewardBuffer
@@ -16,9 +17,6 @@ from elevator_rl.alphazero.sample_generator import Generator
 from elevator_rl.environment.elevator import ElevatorActionEnum
 from elevator_rl.environment.elevator_env import ElevatorEnv
 from elevator_rl.environment.example_houses import get_simple_house
-from torch.utils.tensorboard import SummaryWriter
-from torch.utils.tensorboard.summary import hparams
-from datetime import datetime
 from elevator_rl.yparams import YParams
 
 config_name = os.environ["CONFIG_NAME"] if "CONFIG_NAME" in os.environ else "default"
@@ -26,16 +24,14 @@ yparams = YParams("config.yaml", config_name)
 config = yparams.hparams
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 run_name = f'{datetime.now().strftime("%Y-%m-%d_%H:%M:%S")}_{config_name}'
-batch_count = (
-        config["train"]["samples_per_iteration"] // config["train"]["batch_size"]
-)
+batch_count = config["train"]["samples_per_iteration"] // config["train"]["batch_size"]
 
 
 def train(
-        model: NNModel,
-        replay_buffer: ReplayBuffer,
-        ranked_reward_buffer: RankedRewardBuffer,
-        offset: int
+    model: NNModel,
+    replay_buffer: ReplayBuffer,
+    ranked_reward_buffer: RankedRewardBuffer,
+    offset: int,
 ):
     optimizer = Adam(
         model.parameters(),
@@ -60,7 +56,7 @@ def train(
             pi_vec.append(pi)
             if config["ranked_reward"]["update_rank"]:
                 assert (
-                        ranked_reward_buffer is not None
+                    ranked_reward_buffer is not None
                 ), "rank can only be updated when ranked reward is used"
                 z_vec.append(ranked_reward_buffer.get_ranked_reward(total_reward))
             else:
@@ -85,8 +81,8 @@ def train(
         pred_p, pred_v = model(*obs_vec)
 
         policy_loss = (
-                torch.sum(-pi_vec * torch.log(pred_p + 1e-8))
-                * config["train"]["policy_loss_factor"]
+            torch.sum(-pi_vec * torch.log(pred_p + 1e-8))
+            * config["train"]["policy_loss_factor"]
         )
         value_loss = mse_loss(pred_v, z_vec) * config["train"]["value_loss_factor"]
 
@@ -159,7 +155,6 @@ def main():
         logs = train(model, replay_buffer, ranked_reward_buffer, i * batch_count)
         for log in logs:
             writer.add_scalar(*log)
-            print(log)
 
 
 if __name__ == "__main__":
