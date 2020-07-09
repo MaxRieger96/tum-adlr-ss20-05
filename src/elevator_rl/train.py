@@ -20,6 +20,7 @@ UPDATE_RANK = True  # TODO move this to config
 
 # TODO nothing in this module works yet!
 
+
 def train(
     model: NNModel,
     replay_buffer: ReplayBuffer,
@@ -57,7 +58,7 @@ def train(
             else:
                 z_vec.append(total_reward)
 
-        obs_vec = np.array(obs_vec, dtype=np.float32)
+        obs_vec = np.array(obs_vec, dtype=np.float32)  # TODO stack observations
         pi_vec = np.array(pi_vec, dtype=np.float32)
         z_vec = np.array(z_vec, dtype=np.float32)
         z_vec = np.expand_dims(z_vec, 1)
@@ -102,6 +103,7 @@ def main():
         capacity=config["ranked_reward"]["size"],
         threshold=config["ranked_reward"]["threshold"],
     )
+    # TODO use parallel factory
     generator = Generator(env, ranked_reward_buffer=None)  # TODO make optional
     model = NNModel(
         house_observation_dims=env.get_observation().as_array()[0].shape[0],

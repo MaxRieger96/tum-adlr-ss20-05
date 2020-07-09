@@ -120,9 +120,12 @@ class NNModel(Module, Model):
         ]
 
         # combine encodings to single vector
-        other_elevators_encoding = torch.stack(
-            [e for e in other_elevators_encoding], dim=1
-        ).sum(dim=1, keepdim=False)
+        if len(other_elevators_encoding)>0:
+            other_elevators_encoding = torch.stack(
+                [e for e in other_elevators_encoding], dim=1
+            ).sum(dim=1, keepdim=False)
+        else:
+            other_elevators_encoding = torch.zeros_like(current_elevator_encoding)
         combined_state = torch.cat(
             [current_elevator_encoding, house_encoding, other_elevators_encoding],
             dim=1,
