@@ -16,6 +16,9 @@ from elevator_rl.alphazero.sample_generator import Generator
 from elevator_rl.environment.elevator import ElevatorActionEnum
 from elevator_rl.environment.elevator_env import ElevatorEnv
 from elevator_rl.environment.example_houses import get_simple_house
+from torch.utils.tensorboard import SummaryWriter
+from torch.utils.tensorboard.summary import hparams
+from datetime import datetime
 from elevator_rl.yparams import YParams
 
 config_name = os.environ["CONFIG_NAME"] if "CONFIG_NAME" in os.environ else "default"
@@ -23,12 +26,16 @@ yparams = YParams("config.yaml", config_name)
 config = yparams.hparams
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 run_name = f'{datetime.now().strftime("%Y-%m-%d_%H:%M:%S")}_{config_name}'
+batch_count = (
+        config["train"]["samples_per_iteration"] // config["train"]["batch_size"]
+)
 
 
 def train(
-    model: NNModel,
-    replay_buffer: ReplayBuffer,
-    ranked_reward_buffer: RankedRewardBuffer,
+        model: NNModel,
+        replay_buffer: ReplayBuffer,
+        ranked_reward_buffer: RankedRewardBuffer,
+        offset: int
 ):
     optimizer = Adam(
         model.parameters(),
@@ -40,9 +47,6 @@ def train(
     acc_loss_value = []
     acc_loss_policy = []
     logs = []
-    batch_count = (
-        config["train"]["samples_per_iteration"] // config["train"]["batch_size"]
-    )
     for i in range(batch_count):
         samples = replay_buffer.sample(config["train"]["batch_size"])
 
@@ -56,7 +60,7 @@ def train(
             pi_vec.append(pi)
             if config["ranked_reward"]["update_rank"]:
                 assert (
-                    ranked_reward_buffer is not None
+                        ranked_reward_buffer is not None
                 ), "rank can only be updated when ranked reward is used"
                 z_vec.append(ranked_reward_buffer.get_ranked_reward(total_reward))
             else:
@@ -81,8 +85,8 @@ def train(
         pred_p, pred_v = model(*obs_vec)
 
         policy_loss = (
-            torch.sum(-pi_vec * torch.log(pred_p + 1e-8))
-            * config["train"]["policy_loss_factor"]
+                torch.sum(-pi_vec * torch.log(pred_p + 1e-8))
+                * config["train"]["policy_loss_factor"]
         )
         value_loss = mse_loss(pred_v, z_vec) * config["train"]["value_loss_factor"]
 
@@ -95,17 +99,25 @@ def train(
         optimizer.step()
 
     for i, loss in enumerate(acc_loss_value):
-        logs.append(("value loss", loss, i))
+        logs.append(("value loss", loss, i + offset))
 
     for i, loss in enumerate(acc_loss_policy):
-        logs.append(("policy loss", loss, i))
+        logs.append(("policy loss", loss, i + offset))
 
     return logs
 
 
+def write_hparams(writer: SummaryWriter):
+    exp, ssi, sei = hparams(yparams.flatten(yparams.hparams), {})
+    writer.file_writer.add_summary(exp)
+    writer.file_writer.add_summary(ssi)
+    writer.file_writer.add_summary(sei)
+
+
 def main():
     writer = SummaryWriter(path.join(config["path"], run_name))
-    writer.add_hparams(yparams.flatten(yparams.hparams), metric_dict={})
+    write_hparams(writer=writer)
+
     house = get_simple_house()
 
     env = ElevatorEnv(house)
@@ -144,8 +156,9 @@ def main():
                 replay_buffer.push(sample)
 
         # TRAIN model
-        logs = train(model, replay_buffer, ranked_reward_buffer)
+        logs = train(model, replay_buffer, ranked_reward_buffer, i * batch_count)
         for log in logs:
+            writer.add_scalar(*log)
             print(log)
 
 
