@@ -45,10 +45,13 @@ class NNModel(Module, Model):
             .to(torch.float32)
             .unsqueeze(dim=0)
         )
-        other_elevators_obs = [
-            torch.from_numpy(e).to(device).to(torch.float32).unsqueeze(dim=0)
-            for e in other_elevators_obs
-        ]
+        other_elevators_obs = np.array(other_elevators_obs)
+        other_elevators_obs = (
+            torch.from_numpy(other_elevators_obs)
+            .to(device)
+            .to(torch.float32)
+            .unsqueeze(dim=0)
+        )
 
         # evaluate net
         policy, value = self.forward(
@@ -110,17 +113,20 @@ class NNModel(Module, Model):
         self,
         house_observation: Tensor,
         current_elevator_observation: Tensor,
-        other_elevator_observations: List[Tensor],
+        other_elevator_observations: Tensor,
     ):
         # encode current elevator, house, and other elevators
         current_elevator_encoding = self.encode_elevator(current_elevator_observation)
         house_encoding = self.encode_house(house_observation)
-        other_elevators_encoding = [
-            self.encode_elevator(e) for e in other_elevator_observations
-        ]
+        other_elevators_encoding = []
+        for elevator_index in range(other_elevator_observations.shape[1]):
+            print(elevator_index)
+            other_elevators_encoding.append(
+                self.encode_elevator(other_elevator_observations[:, elevator_index])
+            )
 
         # combine encodings to single vector
-        if len(other_elevators_encoding)>0:
+        if len(other_elevators_encoding) > 0:
             other_elevators_encoding = torch.stack(
                 [e for e in other_elevators_encoding], dim=1
             ).sum(dim=1, keepdim=False)

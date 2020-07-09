@@ -17,15 +17,11 @@ from elevator_rl.environment.example_houses import get_simple_house
 from torch.utils.tensorboard import SummaryWriter
 from datetime import datetime
 
-config_name = (
-    os.environ["CONFIG_NAME"] if "CONFIG_NAME" in os.environ else "default"
-)
-yparams = YParams('config.yaml', config_name)
+config_name = os.environ["CONFIG_NAME"] if "CONFIG_NAME" in os.environ else "default"
+yparams = YParams("config.yaml", config_name)
 config = yparams.hparams
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 run_name = f'{datetime.now().strftime("%Y-%m-%d_%H:%M:%S")}_{config_name}'
-
-# TODO nothing in this module works yet!
 
 
 def train(
@@ -65,16 +61,23 @@ def train(
             else:
                 z_vec.append(total_reward)
 
-        obs_vec = np.array(obs_vec, dtype=np.float32)  # TODO stack observations
+        obs_vec = (
+            np.array([x[0] for x in obs_vec], dtype=np.float32),
+            np.array([x[1] for x in obs_vec], dtype=np.float32),
+            np.array([x[2] for x in obs_vec], dtype=np.float32),
+        )
+
         pi_vec = np.array(pi_vec, dtype=np.float32)
         z_vec = np.array(z_vec, dtype=np.float32)
         z_vec = np.expand_dims(z_vec, 1)
 
-        obs_vec = torch.from_numpy(obs_vec).to(device).to(torch.float32)
+        obs_vec = tuple(
+            torch.from_numpy(x).to(device).to(torch.float32) for x in obs_vec
+        )
         pi_vec = torch.from_numpy(pi_vec).to(device)
         z_vec = torch.from_numpy(z_vec).to(device)
 
-        pred_p, pred_v = model(obs_vec)
+        pred_p, pred_v = model(*obs_vec)
 
         policy_loss = (
             torch.sum(-pi_vec * torch.log(pred_p + 1e-8))
