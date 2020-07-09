@@ -3,7 +3,6 @@ from os import path
 
 import numpy as np
 import torch
-import yaml
 from elevator_rl.yparams import YParams
 from torch.nn.functional import mse_loss
 from torch.optim import Adam
@@ -18,7 +17,6 @@ from elevator_rl.environment.example_houses import get_simple_house
 from torch.utils.tensorboard import SummaryWriter
 from datetime import datetime
 
-stream = open("config_default.yaml", "r", encoding="utf-8")
 config_name = (
     os.environ["CONFIG_NAME"] if "CONFIG_NAME" in os.environ else "default"
 )
