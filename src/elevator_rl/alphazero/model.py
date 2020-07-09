@@ -120,7 +120,6 @@ class NNModel(Module, Model):
         house_encoding = self.encode_house(house_observation)
         other_elevators_encoding = []
         for elevator_index in range(other_elevator_observations.shape[1]):
-            print(elevator_index)
             other_elevators_encoding.append(
                 self.encode_elevator(other_elevator_observations[:, elevator_index])
             )

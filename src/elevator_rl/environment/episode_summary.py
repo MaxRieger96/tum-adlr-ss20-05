@@ -1,4 +1,5 @@
 from statistics import stdev
+from typing import Callable, Iterable
 from typing import List
 from typing import Tuple
 from typing import TYPE_CHECKING
@@ -16,6 +17,7 @@ class Summary:
         elapsed_time: float,
         accumulated_reward: float,
         quadratic_waiting_time: float,
+        waiting_time: float,
     ):
         self.nr_passengers_transported: float = nr_passengers_transported
         self.nr_passengers_waiting: float = nr_passengers_waiting
@@ -23,6 +25,7 @@ class Summary:
         self.elapsed_time: float = elapsed_time
         self.accumulated_reward: float = accumulated_reward
         self.quadratic_waiting_time: float = quadratic_waiting_time
+        self.waiting_time: float = waiting_time
 
     def __str__(self):
         return (
@@ -73,6 +76,7 @@ def get_summary(env: "ElevatorEnv") -> Summary:
         elapsed_time=env.house.time,
         accumulated_reward=env.reward_acc,
         quadratic_waiting_time=env.get_quadratic_total_waiting_time(),
+        waiting_time=env.get_total_waiting_time(),
     )
 
 
@@ -92,6 +96,7 @@ def combine_summaries(summaries: List[Summary]) -> Tuple[Summary, Summary]:
             elapsed_time=sum(s.elapsed_time for s in summaries) / n,
             accumulated_reward=sum(s.accumulated_reward for s in summaries) / n,
             quadratic_waiting_time=sum(s.quadratic_waiting_time for s in summaries) / n,
+            waiting_time=sum(s.waiting_time for s in summaries) / n,
         ),
         SummaryStdDev(
             nr_passengers_transported=stdev(
@@ -104,5 +109,24 @@ def combine_summaries(summaries: List[Summary]) -> Tuple[Summary, Summary]:
             elapsed_time=stdev(s.elapsed_time for s in summaries),
             accumulated_reward=stdev(s.accumulated_reward for s in summaries),
             quadratic_waiting_time=stdev(s.quadratic_waiting_time for s in summaries),
+            waiting_time=stdev(s.waiting_time for s in summaries),
         ),
+    )
+
+
+def accumulate_summaries(
+    summaries: List[Summary], accumulator: Callable[[List[float]], float]
+) -> Summary:
+    return Summary(
+        nr_passengers_transported=accumulator(
+            [s.nr_passengers_transported for s in summaries]
+        ),
+        nr_passengers_waiting=accumulator([s.nr_passengers_waiting for s in summaries]),
+        avg_waiting_time_transported=accumulator(
+            [s.avg_waiting_time_transported for s in summaries]
+        ),
+        elapsed_time=accumulator([s.elapsed_time for s in summaries]),
+        accumulated_reward=accumulator([s.accumulated_reward for s in summaries]),
+        quadratic_waiting_time=accumulator([s.quadratic_waiting_time for s in summaries]),
+        waiting_time=accumulator([s.waiting_time for s in summaries]),
     )

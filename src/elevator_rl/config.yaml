@@ -8,7 +8,7 @@ default: &DEFAULT
   replay_buffer:
     size: 3000
   train:
-    iterations: 10
+    iterations: 100
     episodes: 10
     samples_per_iteration: 1280
     lr: 0.001 #1e-3
@@ -21,6 +21,10 @@ default: &DEFAULT
     size: 250
     threshold: 0.75
     update_rank: True
+  house:
+    elevator_capacity: 10
+    number_of_elevators: 2
+    number_of_floors: 3
 
 many_samples:
   <<: *DEFAULT
