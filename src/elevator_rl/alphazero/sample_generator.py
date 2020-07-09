@@ -27,14 +27,12 @@ except RuntimeError:
 
 class Generator:
     env: ElevatorEnv
-    use_ranked_reward: bool
     ranked_reward_buffer: RankedRewardBuffer
 
     def __init__(
         self, env: ElevatorEnv, ranked_reward_buffer: Optional[RankedRewardBuffer],
     ):
         self.env = env
-        self.use_ranked_reward = ranked_reward_buffer is not None
         self.ranked_reward_buffer = ranked_reward_buffer
 
     @staticmethod
