@@ -128,6 +128,11 @@ def write_episode_summary(
         summary.avg_waiting_time_transported,
         index,
     )
+    writer.add_scalar(
+        name + "avg_waiting_time_per_person",
+        summary.avg_waiting_time_per_person,
+        index,
+    )
     writer.add_scalar(name + "nr_waiting", summary.nr_passengers_waiting, index)
     writer.add_scalar(name + "nr_transported", summary.nr_passengers_transported, index)
 
