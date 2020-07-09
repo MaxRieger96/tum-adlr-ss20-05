@@ -92,7 +92,7 @@ class Generator:
 
         print(".", end="", flush=True)
         if render:
-            subprocess.Popen(["./animate.sh", "-run_name", "some.file", "-iteration", ""])
+            subprocess.Popen(["./animate.sh", "-r", run_name, "-i", str(iteration)])
         return observations, pis, total_reward, current_env.get_summary()
 
 

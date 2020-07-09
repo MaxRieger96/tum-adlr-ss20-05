@@ -1,5 +1,6 @@
 default: &DEFAULT
   path: "../../runs"
+  visualize_iterations: False
   mcts:
     samples: 20
     temp: 1.0

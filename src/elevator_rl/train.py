@@ -207,7 +207,7 @@ def main():
 
         write_episode_summaries(writer, summaries, i * batch_count)
 
-        if i % 10 == 0:
+        if i > 0 and i % 10 == 0 and config["visualize_iterations"]:
             # Visualization Process outputting a video for each iteration
             p = Process(target=generator.perform_episode, args=(config["mcts"]["samples"],
                                                                 config["mcts"]["temp"],
