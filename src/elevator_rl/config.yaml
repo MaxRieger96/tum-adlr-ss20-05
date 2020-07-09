@@ -23,7 +23,7 @@ default: &DEFAULT
     update_rank: True
   house:
     elevator_capacity: 10
-    number_of_elevators: 2
+    number_of_elevators: 1
     number_of_floors: 3
 
 many_samples:

@@ -141,6 +141,7 @@ def write_episode_summaries(
     writer: SummaryWriter, summaries: List[Summary], index: int
 ):
     # TODO make this nice in tensorboard using custom scalars
+    #  https://stackoverflow.com/questions/37146614/tensorboard-plot-training-and-validation-losses-on-the-same-graph
     for name, accumulator in {
         "avg": lambda x: sum(x) / len(x),
         "max": lambda x: max(x),

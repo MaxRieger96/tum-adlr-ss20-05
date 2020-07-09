@@ -42,6 +42,7 @@ class Summary:
         )
 
     def percent_transported(self) -> float:
+        # TODO remove this, summary should be a pure data class
         return self.nr_passengers_transported / (
             self.nr_passengers_transported + self.nr_passengers_waiting
         )

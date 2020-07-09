@@ -12,11 +12,12 @@ from elevator_rl.environment.passenger import Passenger
 if TYPE_CHECKING:
     from elevator_rl.environment.house import House
 
-MOVE_TIME = 2.0  # TODO find a good time values
-ENTER_TIME = 1.0
-DOOR_OPEN_TIME = 1.0
-IDLE_TIME = 10.0  # TODO decide if we want to have the option to idle
+IDLE_TIME = 10.0
 # TODO decide whether we should use the same time for all actions
+#  MOVE_TIME = 2.0
+#  ENTER_TIME = 1.0
+#  DOOR_OPEN_TIME = 1.0
+ANY_MOVE_TIME = 2.0
 
 
 class ElevatorActionEnum(Enum):
@@ -60,12 +61,12 @@ class Elevator:
     def up(self):
         assert self.floor + 1 < self.house.number_of_floors
         self.floor += 1
-        self.time += MOVE_TIME
+        self.time += ANY_MOVE_TIME  # FIXME
 
     def down(self):
         assert self.floor > 0
         self.floor -= 1
-        self.time += MOVE_TIME
+        self.time += ANY_MOVE_TIME  # FIXME
 
     def passengers_enter_elevator(
         self, entering_passengers: Set[Passenger], new_floor_requests: List[int],
@@ -75,11 +76,13 @@ class Elevator:
         self.floor_requests[self.floor] = False
         self.floor_requests[new_floor_requests] = True
         # TODO set better estimates of time taken for entering and leaving
-        self.time += DOOR_OPEN_TIME + len(entering_passengers) * ENTER_TIME
+        # self.time += DOOR_OPEN_TIME + len(entering_passengers) * ENTER_TIME
+        self.time += ANY_MOVE_TIME / 2  # FIXME
 
     def passengers_exit_elevator(self, leaving_passengers: Set[Passenger]):
         self.passengers = self.passengers - leaving_passengers
-        self.time += DOOR_OPEN_TIME + len(leaving_passengers) * ENTER_TIME
+        # self.time += DOOR_OPEN_TIME + len(leaving_passengers) * ENTER_TIME
+        self.time += ANY_MOVE_TIME / 2  # FIXME
 
     def idle(self):
         self.time += IDLE_TIME
