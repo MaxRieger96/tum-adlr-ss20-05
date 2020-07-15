@@ -124,9 +124,7 @@ def write_episode_summary(
         name + "quadratic_waiting_time", summary.quadratic_waiting_time, index
     )
     writer.add_scalar(name + "waiting_time", summary.waiting_time, index)
-    writer.add_scalar(
-        name + "percent_transported", summary.percent_transported(), index
-    )
+    writer.add_scalar(name + "percent_transported", summary.percent_transported, index)
     writer.add_scalar(
         name + "avg_waiting_time_transported",
         summary.avg_waiting_time_transported,

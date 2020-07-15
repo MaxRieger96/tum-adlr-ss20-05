@@ -74,9 +74,7 @@ def main():
         summarydict[floors][elevs][mcts] = current_summaries
     print("done reading")
 
-    plot(
-        summarydict, 1, lambda x: x.percent_transported(), "% of passengers transported"
-    )
+    plot(summarydict, 1, lambda x: x.percent_transported, "% of passengers transported")
 
     plot(summarydict, 1, lambda x: x.quadratic_waiting_time, "quadratic waiting time")
 
