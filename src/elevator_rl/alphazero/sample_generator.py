@@ -96,6 +96,7 @@ class Generator:
         print(".", end="", flush=True)
         if render:
             subprocess.Popen(["./animate.sh", "-r", run_name, "-i", str(iteration)])
+            print("Video rendered for iteration {}".format(iteration))
         return observations, pis, total_reward, current_env.get_summary()
 
 

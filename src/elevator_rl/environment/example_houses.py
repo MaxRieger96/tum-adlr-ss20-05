@@ -19,8 +19,12 @@ def get_simple_house() -> House:
     return produce_house(10, 1, 3)
 
 
+def get_10_story_single_elev_house() -> House:
+    return produce_house(20, 1, 10)
+
+
 def produce_house(
-    elevator_capacity: int, number_of_elevators: int, number_of_floors: int
+        elevator_capacity: int, number_of_elevators: int, number_of_floors: int
 ) -> House:
     request_rates = np.ones(number_of_floors)
     request_rates /= 60
