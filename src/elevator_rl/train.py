@@ -132,6 +132,9 @@ def main(config_name: str):
     yparams = YParams("config.yaml", config_name)
     config = yparams.hparams
     run_name = f'{datetime.now().strftime("%Y-%m-%d_%H:%M:%S")}_{config_name}'
+    assert not (
+        config["offline_training"] and not config["pretrained_path"]
+    ), "Offline training requires pretrained buffer"
 
     logger = Logger(SummaryWriter(path.join(config["path"], run_name)))
     logger.write_hparams(yparams=yparams)
@@ -167,35 +170,48 @@ def main(config_name: str):
         policy_dims=ElevatorActionEnum.count(),
     )
 
-    iteration_start = 0
+    if config["pretrained_path"]:
+        checkpoint = torch.load(config["pretrained_path"])
+        env = checkpoint["environment"]
+        model.load_state_dict(checkpoint["model_state_dict"])
+        iteration_start = checkpoint["iteration_start"]
+        replay_buffer = checkpoint["replay_buffer"]
+        ranked_reward_buffer = checkpoint["ranked_reward_buffer"]
+    else:
+        iteration_start = 0
+
     for i in range(iteration_start, config["train"]["iterations"]):
-
-        print(f"\niteration {i}: sampling started")
-
-        episodes = factory.create_episodes(
-            n_episodes=config["train"]["episodes"],
-            n_processes=config["train"]["n_processes"],
-            mcts_samples=config["mcts"]["samples"],
-            mcts_temp=config["mcts"]["temp"],
-            mcts_cpuct=config["mcts"]["cpuct"],
-            mcts_observation_weight=config["mcts"]["observation_weight"],
-            model=model,
-        )
-
-        summaries = []
-        for episode_index, e in enumerate(episodes):
-            observations, pis, total_reward, summary = e
-            for j, pi in enumerate(pis):
-                sample = (observations[j], pi, total_reward)
-                replay_buffer.push(sample)
-            summaries.append(summary)
-
-        logger.write_episode_summaries(summaries, i * batch_count)
-
-        if i > 0 and i % 3 == 0 and config["visualize_iterations"]:
-            create_video_images(
-                generator=generator, config=config, model=model, i=i, run_name=run_name
+        print(f"\niteration {i}")
+        if not config["offline_training"]:
+            print(f"\niteration {i}: sampling started")
+            episodes = factory.create_episodes(
+                n_episodes=config["train"]["episodes"],
+                n_processes=config["train"]["n_processes"],
+                mcts_samples=config["mcts"]["samples"],
+                mcts_temp=config["mcts"]["temp"],
+                mcts_cpuct=config["mcts"]["cpuct"],
+                mcts_observation_weight=config["mcts"]["observation_weight"],
+                model=model,
             )
+
+            summaries = []
+            for episode_index, e in enumerate(episodes):
+                observations, pis, total_reward, summary = e
+                for j, pi in enumerate(pis):
+                    sample = (observations[j], pi, total_reward)
+                    replay_buffer.push(sample)
+                summaries.append(summary)
+
+            logger.write_episode_summaries(summaries, i * batch_count)
+
+            if i > 0 and i % 3 == 0 and config["visualize_iterations"]:
+                create_video_images(
+                    generator=generator,
+                    config=config,
+                    model=model,
+                    i=i,
+                    run_name=run_name,
+                )
 
         # TRAIN model
         logs = train(
@@ -203,10 +219,22 @@ def main(config_name: str):
         )
         logger.log_train(logs)
 
+        if config["save_iterations"]:
+            torch.save(
+                {
+                    "environment": env,
+                    "iteration_start": i + 1,
+                    "model_state_dict": model.state_dict(),
+                    "replay_buffer": replay_buffer,
+                    "ranked_reward_buffer": ranked_reward_buffer,
+                },
+                path.join(config["path"], run_name, f"model_save_{i}.pth"),
+            )
+
 
 if __name__ == "__main__":
-    main(
-        config_name=os.environ["CONFIG_NAME"]
-        if "CONFIG_NAME" in os.environ
-        else "default"
+    loaded_config = (
+        os.environ["CONFIG_NAME"] if "CONFIG_NAME" in os.environ else "default"
     )
+    print(loaded_config)
+    main(config_name=loaded_config)
