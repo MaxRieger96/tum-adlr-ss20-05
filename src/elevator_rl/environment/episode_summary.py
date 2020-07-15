@@ -44,6 +44,55 @@ class Summary:
             f"avg waiting time per person: {self.avg_waiting_time_per_person:.1f}"
         )
 
+    def __abs__(self) -> "Summary":
+        return Summary(
+            nr_passengers_transported=abs(self.nr_passengers_transported),
+            nr_passengers_waiting=abs(self.nr_passengers_waiting),
+            avg_waiting_time_transported=abs(self.avg_waiting_time_transported),
+            avg_waiting_time_per_person=abs(self.avg_waiting_time_per_person),
+            elapsed_time=abs(self.elapsed_time),
+            accumulated_reward=abs(self.accumulated_reward),
+            quadratic_waiting_time=abs(self.quadratic_waiting_time),
+            waiting_time=abs(self.waiting_time),
+            percent_transported=abs(self.percent_transported),
+        )
+
+    def __add__(self, other: "Summary") -> "Summary":
+        return Summary(
+            nr_passengers_transported=self.nr_passengers_transported
+            + other.nr_passengers_transported,
+            nr_passengers_waiting=self.nr_passengers_waiting
+            + other.nr_passengers_waiting,
+            avg_waiting_time_transported=self.avg_waiting_time_transported
+            + other.avg_waiting_time_transported,
+            avg_waiting_time_per_person=self.avg_waiting_time_per_person
+            + other.avg_waiting_time_per_person,
+            elapsed_time=self.elapsed_time + other.elapsed_time,
+            accumulated_reward=self.accumulated_reward + other.accumulated_reward,
+            quadratic_waiting_time=self.quadratic_waiting_time
+            + other.quadratic_waiting_time,
+            waiting_time=self.waiting_time + other.waiting_time,
+            percent_transported=self.percent_transported + other.percent_transported,
+        )
+
+    def __sub__(self, other: "Summary") -> "Summary":
+        return Summary(
+            nr_passengers_transported=self.nr_passengers_transported
+            - other.nr_passengers_transported,
+            nr_passengers_waiting=self.nr_passengers_waiting
+            - other.nr_passengers_waiting,
+            avg_waiting_time_transported=self.avg_waiting_time_transported
+            - other.avg_waiting_time_transported,
+            avg_waiting_time_per_person=self.avg_waiting_time_per_person
+            - other.avg_waiting_time_per_person,
+            elapsed_time=self.elapsed_time - other.elapsed_time,
+            accumulated_reward=self.accumulated_reward - other.accumulated_reward,
+            quadratic_waiting_time=self.quadratic_waiting_time
+            - other.quadratic_waiting_time,
+            waiting_time=self.waiting_time - other.waiting_time,
+            percent_transported=self.percent_transported - other.percent_transported,
+        )
+
 
 class SummaryStdDev(Summary):
     def __str__(self):
