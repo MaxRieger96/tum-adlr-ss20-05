@@ -1,6 +1,9 @@
 default: &DEFAULT
   path: "../../runs"
   visualize_iterations: True
+  save_iterations: False
+  pretrained_path: ""
+  offline_training: False
   mcts:
     samples: 20
     temp: 1.0
@@ -26,6 +29,15 @@ default: &DEFAULT
     elevator_capacity: 10
     number_of_elevators: 1
     number_of_floors: 3
+
+save_model:
+  <<: *DEFAULT
+  save_iterations: True
+
+load_model:
+  <<: *DEFAULT
+  pretrained_path: "/home/pfeifletim/pycharm/runs/2020-07-15_12:30:39_save_model/model_save_3.pth"
+  offline_training: True
 
 many_samples:
   <<: *DEFAULT

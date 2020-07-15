@@ -30,11 +30,11 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 def train(
-    model: NNModel,
-    replay_buffer: ReplayBuffer,
-    ranked_reward_buffer: RankedRewardBuffer,
-    offset: int,
-    config: Dict,
+        model: NNModel,
+        replay_buffer: ReplayBuffer,
+        ranked_reward_buffer: RankedRewardBuffer,
+        offset: int,
+        config: Dict,
 ):
     optimizer = Adam(
         model.parameters(),
@@ -42,7 +42,7 @@ def train(
         weight_decay=config["train"]["weight_decay"],
     )
     batch_count = (
-        config["train"]["samples_per_iteration"] // config["train"]["batch_size"]
+            config["train"]["samples_per_iteration"] // config["train"]["batch_size"]
     )
     model.to(device)
     model.train()
@@ -62,7 +62,7 @@ def train(
             pi_vec.append(pi)
             if config["ranked_reward"]["update_rank"]:
                 assert (
-                    ranked_reward_buffer is not None
+                        ranked_reward_buffer is not None
                 ), "rank can only be updated when ranked reward is used"
                 z_vec.append(ranked_reward_buffer.get_ranked_reward(total_reward))
             else:
@@ -87,8 +87,8 @@ def train(
         pred_p, pred_v = model(*obs_vec)
 
         policy_loss = (
-            torch.sum(-pi_vec * torch.log(pred_p + 1e-8))
-            * config["train"]["policy_loss_factor"]
+                torch.sum(-pi_vec * torch.log(pred_p + 1e-8))
+                * config["train"]["policy_loss_factor"]
         )
         value_loss = mse_loss(pred_v, z_vec) * config["train"]["value_loss_factor"]
 
@@ -117,7 +117,7 @@ def write_hparams(writer: SummaryWriter, yparams: YParams):
 
 
 def write_episode_summary(
-    writer: SummaryWriter, summary: Summary, index: int, name: str
+        writer: SummaryWriter, summary: Summary, index: int, name: str
 ):
     name = name + "_"
     writer.add_scalar(
@@ -140,7 +140,7 @@ def write_episode_summary(
 
 
 def write_episode_summaries(
-    writer: SummaryWriter, summaries: List[Summary], index: int
+        writer: SummaryWriter, summaries: List[Summary], index: int
 ):
     # TODO make this nice in tensorboard using custom scalars
     #  https://stackoverflow.com/questions/37146614/tensorboard-plot-training-and-validation-losses-on-the-same-graph
@@ -158,12 +158,14 @@ def main(config_name: str):
     yparams = YParams("config.yaml", config_name)
     config = yparams.hparams
     run_name = f'{datetime.now().strftime("%Y-%m-%d_%H:%M:%S")}_{config_name}'
+    assert not (config["offline_training"] and not config[
+        "pretrained_path"]), "Offline training requires pretrained buffer"
 
     writer = SummaryWriter(path.join(config["path"], run_name))
     write_hparams(writer=writer, yparams=yparams)
 
     batch_count = (
-        config["train"]["samples_per_iteration"] // config["train"]["batch_size"]
+            config["train"]["samples_per_iteration"] // config["train"]["batch_size"]
     )
     house = produce_house(
         elevator_capacity=config["house"]["elevator_capacity"],
@@ -192,48 +194,57 @@ def main(config_name: str):
         policy_dims=ElevatorActionEnum.count(),
     )
 
-    iteration_start = 0
+    if config["pretrained_path"]:
+        checkpoint = torch.load(config["pretrained_path"])
+        env = checkpoint["environment"]
+        model.load_state_dict(checkpoint["model_state_dict"])
+        iteration_start = checkpoint["iteration_start"]
+        replay_buffer = checkpoint["replay_buffer"]
+        ranked_reward_buffer = checkpoint["ranked_reward_buffer"]
+    else:
+        iteration_start = 0
+
     for i in range(iteration_start, config["train"]["iterations"]):
-
-        print(f"\niteration {i}: sampling started")
-
-        episodes = factory.create_episodes(
-            n_episodes=config["train"]["episodes"],
-            n_processes=config["train"]["n_processes"],
-            mcts_samples=config["mcts"]["samples"],
-            mcts_temp=config["mcts"]["temp"],
-            mcts_cpuct=config["mcts"]["cpuct"],
-            mcts_observation_weight=config["mcts"]["observation_weight"],
-            model=model,
-        )
-
-        summaries = []
-        for episode_index, e in enumerate(episodes):
-            assert len(episodes) < batch_count, "the tensorboard indices make no sense"
-            observations, pis, total_reward, summary = e
-            for j, pi in enumerate(pis):
-                sample = (observations[j], pi, total_reward)
-                replay_buffer.push(sample)
-            summaries.append(summary)
-
-        write_episode_summaries(writer, summaries, i * batch_count)
-
-        if i > 0 and i % 3 == 0 and config["visualize_iterations"]:
-            # Visualization Process outputting a video for each iteration
-            p = Process(
-                target=generator.perform_episode,
-                args=(
-                    config["mcts"]["samples"],
-                    config["mcts"]["temp"],
-                    config["mcts"]["cpuct"],
-                    config["mcts"]["observation_weight"],
-                    deepcopy(model),
-                    True,
-                    i,
-                    run_name,
-                ),
+        print(f"\niteration {i}")
+        if not config["offline_training"]:
+            print(f"\niteration {i}: sampling started")
+            episodes = factory.create_episodes(
+                n_episodes=config["train"]["episodes"],
+                n_processes=config["train"]["n_processes"],
+                mcts_samples=config["mcts"]["samples"],
+                mcts_temp=config["mcts"]["temp"],
+                mcts_cpuct=config["mcts"]["cpuct"],
+                mcts_observation_weight=config["mcts"]["observation_weight"],
+                model=model,
             )
-            p.start()
+
+            summaries = []
+            for episode_index, e in enumerate(episodes):
+                assert len(episodes) < batch_count, "the tensorboard indices make no sense"
+                observations, pis, total_reward, summary = e
+                for j, pi in enumerate(pis):
+                    sample = (observations[j], pi, total_reward)
+                    replay_buffer.push(sample)
+                summaries.append(summary)
+
+            write_episode_summaries(writer, summaries, i * batch_count)
+
+            if i > 0 and i % 3 == 0 and config["visualize_iterations"]:
+                # Visualization Process outputting a video for each iteration
+                p = Process(
+                    target=generator.perform_episode,
+                    args=(
+                        config["mcts"]["samples"],
+                        config["mcts"]["temp"],
+                        config["mcts"]["cpuct"],
+                        config["mcts"]["observation_weight"],
+                        deepcopy(model),
+                        True,
+                        i,
+                        run_name,
+                    ),
+                )
+                p.start()
 
         # TRAIN model
         logs = train(
@@ -242,10 +253,22 @@ def main(config_name: str):
         for log in logs:
             writer.add_scalar(*log)
 
+        if config["save_iterations"]:
+            torch.save(
+                {
+                    "environment": env,
+                    "iteration_start": i + 1,
+                    "model_state_dict": model.state_dict(),
+                    "replay_buffer": replay_buffer,
+                    "ranked_reward_buffer": ranked_reward_buffer,
+                },
+                path.join(config["path"], run_name, f"model_save_{i}.pth"),
+            )
+
 
 if __name__ == "__main__":
+    loaded_config = os.environ["CONFIG_NAME"] if "CONFIG_NAME" in os.environ else "default"
+    print(loaded_config)
     main(
-        config_name=os.environ["CONFIG_NAME"]
-        if "CONFIG_NAME" in os.environ
-        else "default"
+        config_name=loaded_config
     )
