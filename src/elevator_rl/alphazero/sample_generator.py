@@ -1,13 +1,13 @@
+import os
+import subprocess
 from copy import deepcopy
+from pathlib import Path
 from typing import List
 from typing import Optional
 from typing import Tuple
 
 import numpy as np
-import os
-from pathlib import Path
 import torch
-import subprocess
 from torch.distributions import Categorical
 from torch.multiprocessing import Pool
 from torch.multiprocessing import set_start_method
@@ -32,7 +32,7 @@ class Generator:
     ranked_reward_buffer: RankedRewardBuffer
 
     def __init__(
-            self, env: ElevatorEnv, ranked_reward_buffer: Optional[RankedRewardBuffer],
+        self, env: ElevatorEnv, ranked_reward_buffer: Optional[RankedRewardBuffer],
     ):
         self.env = env
         self.ranked_reward_buffer = ranked_reward_buffer
@@ -44,15 +44,15 @@ class Generator:
         return action.numpy().flatten()[0]
 
     def perform_episode(
-            self,
-            mcts_samples: int,
-            mcts_temp: float,
-            mcts_cpuct: int,
-            mcts_observation_weight: float,
-            model: Model,
-            render: bool = False,
-            iteration: int = None,
-            run_name: str = None
+        self,
+        mcts_samples: int,
+        mcts_temp: float,
+        mcts_cpuct: int,
+        mcts_observation_weight: float,
+        model: Model,
+        render: bool = False,
+        iteration: int = None,
+        run_name: str = None,
     ) -> Tuple[List[ObservationType], List[np.ndarray], int, Summary]:
         current_env = deepcopy(self.env)
         pis = []
@@ -82,13 +82,16 @@ class Generator:
 
             if render:
                 root_dir = os.path.dirname(os.path.abspath(__file__))
-                path = os.path.join(root_dir,
-                                    "{}/../plots/run_{}/iteration{}".format(root_dir,
-                                                                            run_name,
-                                                                            iteration))
+                path = os.path.join(
+                    root_dir,
+                    "{}/../plots/run_{}/iteration{}".format(
+                        root_dir, run_name, iteration
+                    ),
+                )
                 Path(path).mkdir(parents=True, exist_ok=True)
-                current_env.render(method="file", prev_time=prev_time, path=path,
-                                   action=env_action)
+                current_env.render(
+                    method="file", prev_time=prev_time, path=path, action=env_action
+                )
 
         print(".", end="", flush=True)
         if render:
@@ -101,15 +104,15 @@ class EpisodeFactory:
         self._generator: Generator = generator
 
     def create_episodes(
-            self,
-            n_episodes: int,
-            n_processes: int,
-            mcts_samples: int,
-            mcts_temp: float,
-            mcts_cpuct: int,
-            mcts_observation_weight: float,
-            model: Model,
-    ):
+        self,
+        n_episodes: int,
+        n_processes: int,
+        mcts_samples: int,
+        mcts_temp: float,
+        mcts_cpuct: int,
+        mcts_observation_weight: float,
+        model: Model,
+    ) -> List[Tuple[List[ObservationType], List[np.ndarray], int, Summary]]:
         pool = Pool(n_processes)
         res = pool.starmap(
             self._generator.perform_episode,
@@ -119,6 +122,30 @@ class EpisodeFactory:
         pool.close()
         pool.terminate()
         pool.join()
+        return res
+
+
+class SingleProcessEpisodeFactory:
+    def __init__(self, generator: Generator):
+        self._generator: Generator = generator
+
+    def create_episodes(
+        self,
+        n_episodes: int,
+        n_processes: int,
+        mcts_samples: int,
+        mcts_temp: float,
+        mcts_cpuct: int,
+        mcts_observation_weight: float,
+        model: Model,
+    ) -> List[Tuple[List[ObservationType], List[np.ndarray], int, Summary]]:
+        res = []
+        for _ in range(n_episodes):
+            res.append(
+                self._generator.perform_episode(
+                    mcts_samples, mcts_temp, mcts_cpuct, mcts_observation_weight, model
+                )
+            )
         return res
 
 
