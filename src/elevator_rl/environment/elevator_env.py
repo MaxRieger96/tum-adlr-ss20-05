@@ -62,6 +62,10 @@ class ElevatorEnv:
         self.house.elapse_time_to(new_time)
 
         reward = -1 * self._quadratic_waiting_time(start_time, new_time)
+
+        # FIXME this is a trick to punish pending requests more
+        #  reward -= self._get_pending_requests_penalty()
+
         self.reward_acc += reward
         return self.get_observation(), reward
 
@@ -161,6 +165,20 @@ class ElevatorEnv:
         waiting_times_at_new_time = new_time - arrival_times
         quadratic_deltas = waiting_times_at_new_time ** 2 - waiting_times_at_start ** 2
         return float(np.sum(quadratic_deltas))
+
+    def _get_pending_requests_penalty(self):
+        pending_requests = 0
+        for i, present in enumerate(self.house.up_requests):
+            if present:
+                pending_requests += (
+                    self.house.time - self.house.up_requests_waiting_since[i]
+                ) ** 2
+        for i, present in enumerate(self.house.down_requests):
+            if present:
+                pending_requests += (
+                    self.house.time - self.house.down_requests_waiting_since[i]
+                ) ** 2
+        return pending_requests
 
 
 def main():
