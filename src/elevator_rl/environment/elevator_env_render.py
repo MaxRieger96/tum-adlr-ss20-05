@@ -1,4 +1,3 @@
-import os
 from enum import Enum
 from typing import List
 
@@ -99,7 +98,9 @@ def draw_passenger_request(
             )  # TODO better text pos
 
 
-def render(house: House, method: str, path: str, prev_time: float, action: ElevatorEnvAction):
+def render(
+    house: House, method: str, path: str, prev_time: float, action: ElevatorEnvAction
+):
     method = method if method in ["matplotlib", "file"] else "matplotlib"
     width = len(house.elevators) * ELEVATOR_SPACING
     height = house.number_of_floors * FLOOR_HEIGHT
@@ -200,8 +201,6 @@ def render(house: House, method: str, path: str, prev_time: float, action: Eleva
         start_time = int(prev_time)
         stop_time = int(house.time)
         for time in range(start_time, stop_time):
-            plt.savefig(
-                "{}/step_{}.png".format(path, time)
-            )
+            plt.savefig("{}/step_{}.png".format(path, time))
         # plt.show()
         plt.close()

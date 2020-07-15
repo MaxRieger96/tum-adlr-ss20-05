@@ -2,7 +2,8 @@ import os
 from copy import deepcopy
 from datetime import datetime
 from os import path
-from typing import List, Dict
+from typing import Dict
+from typing import List
 
 import numpy as np
 import torch
@@ -17,9 +18,11 @@ from elevator_rl.alphazero.ranked_reward import RankedRewardBuffer
 from elevator_rl.alphazero.replay_buffer import ReplayBuffer
 from elevator_rl.alphazero.sample_generator import EpisodeFactory
 from elevator_rl.alphazero.sample_generator import Generator
+from elevator_rl.alphazero.sample_generator import SingleProcessEpisodeFactory
 from elevator_rl.environment.elevator import ElevatorActionEnum
 from elevator_rl.environment.elevator_env import ElevatorEnv
-from elevator_rl.environment.episode_summary import Summary, accumulate_summaries
+from elevator_rl.environment.episode_summary import accumulate_summaries
+from elevator_rl.environment.episode_summary import Summary
 from elevator_rl.environment.example_houses import produce_house
 from elevator_rl.yparams import YParams
 
@@ -27,18 +30,20 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 def train(
-        model: NNModel,
-        replay_buffer: ReplayBuffer,
-        ranked_reward_buffer: RankedRewardBuffer,
-        offset: int,
-        config: Dict
+    model: NNModel,
+    replay_buffer: ReplayBuffer,
+    ranked_reward_buffer: RankedRewardBuffer,
+    offset: int,
+    config: Dict,
 ):
     optimizer = Adam(
         model.parameters(),
         lr=config["train"]["lr"],
         weight_decay=config["train"]["weight_decay"],
     )
-    batch_count = config["train"]["samples_per_iteration"] // config["train"]["batch_size"]
+    batch_count = (
+        config["train"]["samples_per_iteration"] // config["train"]["batch_size"]
+    )
     model.to(device)
     model.train()
     acc_loss_value = []
@@ -57,7 +62,7 @@ def train(
             pi_vec.append(pi)
             if config["ranked_reward"]["update_rank"]:
                 assert (
-                        ranked_reward_buffer is not None
+                    ranked_reward_buffer is not None
                 ), "rank can only be updated when ranked reward is used"
                 z_vec.append(ranked_reward_buffer.get_ranked_reward(total_reward))
             else:
@@ -82,8 +87,8 @@ def train(
         pred_p, pred_v = model(*obs_vec)
 
         policy_loss = (
-                torch.sum(-pi_vec * torch.log(pred_p + 1e-8))
-                * config["train"]["policy_loss_factor"]
+            torch.sum(-pi_vec * torch.log(pred_p + 1e-8))
+            * config["train"]["policy_loss_factor"]
         )
         value_loss = mse_loss(pred_v, z_vec) * config["train"]["value_loss_factor"]
 
@@ -112,7 +117,7 @@ def write_hparams(writer: SummaryWriter, yparams: YParams):
 
 
 def write_episode_summary(
-        writer: SummaryWriter, summary: Summary, index: int, name: str
+    writer: SummaryWriter, summary: Summary, index: int, name: str
 ):
     name = name + "_"
     writer.add_scalar(
@@ -137,7 +142,7 @@ def write_episode_summary(
 
 
 def write_episode_summaries(
-        writer: SummaryWriter, summaries: List[Summary], index: int
+    writer: SummaryWriter, summaries: List[Summary], index: int
 ):
     # TODO make this nice in tensorboard using custom scalars
     #  https://stackoverflow.com/questions/37146614/tensorboard-plot-training-and-validation-losses-on-the-same-graph
@@ -159,7 +164,9 @@ def main(config_name: str):
     writer = SummaryWriter(path.join(config["path"], run_name))
     write_hparams(writer=writer, yparams=yparams)
 
-    batch_count = config["train"]["samples_per_iteration"] // config["train"]["batch_size"]
+    batch_count = (
+        config["train"]["samples_per_iteration"] // config["train"]["batch_size"]
+    )
     house = produce_house(
         elevator_capacity=config["house"]["elevator_capacity"],
         number_of_elevators=config["house"]["number_of_elevators"],
@@ -176,7 +183,11 @@ def main(config_name: str):
     )
 
     generator = Generator(env, ranked_reward_buffer)
-    factory = EpisodeFactory(generator)
+    if config["train"]["n_processes"] > 1:
+        factory = EpisodeFactory(generator)
+    else:
+        factory = SingleProcessEpisodeFactory(generator)
+
     model = NNModel(
         house_observation_dims=env.get_observation().as_array()[0].shape[0],
         elevator_observation_dims=env.get_observation().as_array()[1].shape[0],
@@ -211,21 +222,32 @@ def main(config_name: str):
 
         if i > 0 and i % 3 == 0 and config["visualize_iterations"]:
             # Visualization Process outputting a video for each iteration
-            p = Process(target=generator.perform_episode, args=(config["mcts"]["samples"],
-                                                                config["mcts"]["temp"],
-                                                                config["mcts"]["cpuct"],
-                                                                config["mcts"]["observation_weight"],
-                                                                deepcopy(model),
-                                                                True,
-                                                                i,
-                                                                run_name))
+            p = Process(
+                target=generator.perform_episode,
+                args=(
+                    config["mcts"]["samples"],
+                    config["mcts"]["temp"],
+                    config["mcts"]["cpuct"],
+                    config["mcts"]["observation_weight"],
+                    deepcopy(model),
+                    True,
+                    i,
+                    run_name,
+                ),
+            )
             p.start()
 
         # TRAIN model
-        logs = train(model, replay_buffer, ranked_reward_buffer, i * batch_count, config)
+        logs = train(
+            model, replay_buffer, ranked_reward_buffer, i * batch_count, config
+        )
         for log in logs:
             writer.add_scalar(*log)
 
 
 if __name__ == "__main__":
-    main(config_name=os.environ["CONFIG_NAME"] if "CONFIG_NAME" in os.environ else "default")
+    main(
+        config_name=os.environ["CONFIG_NAME"]
+        if "CONFIG_NAME" in os.environ
+        else "default"
+    )
