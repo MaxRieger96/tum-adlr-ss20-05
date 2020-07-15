@@ -1,5 +1,7 @@
 import os
 import subprocess
+from abc import ABC
+from abc import abstractmethod
 from copy import deepcopy
 from pathlib import Path
 from typing import List
@@ -99,7 +101,22 @@ class Generator:
         return observations, pis, total_reward, current_env.get_summary()
 
 
-class EpisodeFactory:
+class EpisodeFactory(ABC):
+    @abstractmethod
+    def create_episodes(
+        self,
+        n_episodes: int,
+        n_processes: int,
+        mcts_samples: int,
+        mcts_temp: float,
+        mcts_cpuct: int,
+        mcts_observation_weight: float,
+        model: Model,
+    ):
+        pass
+
+
+class MultiProcessEpisodeFactory(EpisodeFactory):
     def __init__(self, generator: Generator):
         self._generator: Generator = generator
 
@@ -125,7 +142,7 @@ class EpisodeFactory:
         return res
 
 
-class SingleProcessEpisodeFactory:
+class SingleProcessEpisodeFactory(EpisodeFactory):
     def __init__(self, generator: Generator):
         self._generator: Generator = generator
 

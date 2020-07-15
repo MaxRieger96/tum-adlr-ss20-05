@@ -5,8 +5,8 @@ from datetime import datetime
 import numpy as np
 
 from elevator_rl.alphazero.model import Model
-from elevator_rl.alphazero.sample_generator import EpisodeFactory
 from elevator_rl.alphazero.sample_generator import Generator
+from elevator_rl.alphazero.sample_generator import MultiProcessEpisodeFactory
 from elevator_rl.environment.elevator_env import ElevatorEnv
 from elevator_rl.environment.episode_summary import combine_summaries
 from elevator_rl.environment.example_houses import get_simple_house
@@ -43,7 +43,7 @@ def main():
     env.render(method="matplotlib")
     generator = Generator(env, ranked_reward_buffer=None)  # TODO use configs
 
-    factory = EpisodeFactory(generator)
+    factory = MultiProcessEpisodeFactory(generator)
     model = UniformModel()
     episodes = factory.create_episodes(
         EPISODES,

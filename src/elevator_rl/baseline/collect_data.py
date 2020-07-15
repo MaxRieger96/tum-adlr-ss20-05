@@ -2,8 +2,8 @@ import logging
 import pickle
 from datetime import datetime
 
-from elevator_rl.alphazero.sample_generator import EpisodeFactory
 from elevator_rl.alphazero.sample_generator import Generator
+from elevator_rl.alphazero.sample_generator import MultiProcessEpisodeFactory
 from elevator_rl.baseline.random_policy import RandomPolicy
 from elevator_rl.baseline.uniform_model import UniformModel
 from elevator_rl.environment.elevator import ElevatorActionEnum
@@ -43,7 +43,7 @@ def main():
                 # env.render(method="matplotlib", step=0)
                 generator = Generator(env, ranked_reward_buffer=None)
 
-                factory = EpisodeFactory(generator)
+                factory = MultiProcessEpisodeFactory(generator)
                 model = UniformModel()
                 episodes = factory.create_episodes(
                     EPISODES,

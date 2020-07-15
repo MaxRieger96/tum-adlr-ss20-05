@@ -3,7 +3,6 @@ from copy import deepcopy
 from datetime import datetime
 from os import path
 from typing import Dict
-from typing import List
 
 import numpy as np
 import torch
@@ -11,22 +10,42 @@ from torch.multiprocessing import Process
 from torch.nn.functional import mse_loss
 from torch.optim import Adam
 from torch.utils.tensorboard import SummaryWriter
-from torch.utils.tensorboard.summary import hparams
 
+from elevator_rl.alphazero.model import Model
 from elevator_rl.alphazero.model import NNModel
 from elevator_rl.alphazero.ranked_reward import RankedRewardBuffer
 from elevator_rl.alphazero.replay_buffer import ReplayBuffer
 from elevator_rl.alphazero.sample_generator import EpisodeFactory
 from elevator_rl.alphazero.sample_generator import Generator
+from elevator_rl.alphazero.sample_generator import MultiProcessEpisodeFactory
 from elevator_rl.alphazero.sample_generator import SingleProcessEpisodeFactory
+from elevator_rl.alphazero.tensorboard import Logger
 from elevator_rl.environment.elevator import ElevatorActionEnum
 from elevator_rl.environment.elevator_env import ElevatorEnv
-from elevator_rl.environment.episode_summary import accumulate_summaries
-from elevator_rl.environment.episode_summary import Summary
 from elevator_rl.environment.example_houses import produce_house
 from elevator_rl.yparams import YParams
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+
+def create_video_images(
+    generator: Generator, config: Dict, model: Model, i: int, run_name: str
+):
+    # Visualization Process outputting a video for each iteration
+    p = Process(
+        target=generator.perform_episode,
+        args=(
+            config["mcts"]["samples"],
+            config["mcts"]["temp"],
+            config["mcts"]["cpuct"],
+            config["mcts"]["observation_weight"],
+            deepcopy(model),
+            True,
+            i,
+            run_name,
+        ),
+    )
+    p.start()
 
 
 def train(
@@ -109,58 +128,13 @@ def train(
     return logs
 
 
-def write_hparams(writer: SummaryWriter, yparams: YParams):
-    exp, ssi, sei = hparams(yparams.flatten(yparams.hparams), {})
-    writer.file_writer.add_summary(exp)
-    writer.file_writer.add_summary(ssi)
-    writer.file_writer.add_summary(sei)
-
-
-def write_episode_summary(
-    writer: SummaryWriter, summary: Summary, index: int, name: str
-):
-    name = name + "_"
-    writer.add_scalar(
-        name + "quadratic_waiting_time", summary.quadratic_waiting_time, index
-    )
-    writer.add_scalar(name + "waiting_time", summary.waiting_time, index)
-    writer.add_scalar(name + "percent_transported", summary.percent_transported, index)
-    writer.add_scalar(
-        name + "avg_waiting_time_transported",
-        summary.avg_waiting_time_transported,
-        index,
-    )
-    writer.add_scalar(
-        name + "avg_waiting_time_per_person",
-        summary.avg_waiting_time_per_person,
-        index,
-    )
-    writer.add_scalar(name + "nr_waiting", summary.nr_passengers_waiting, index)
-    writer.add_scalar(name + "nr_transported", summary.nr_passengers_transported, index)
-
-
-def write_episode_summaries(
-    writer: SummaryWriter, summaries: List[Summary], index: int
-):
-    # TODO make this nice in tensorboard using custom scalars
-    #  https://stackoverflow.com/questions/37146614/tensorboard-plot-training-and-validation-losses-on-the-same-graph
-    for name, accumulator in {
-        "avg": lambda x: sum(x) / len(x),
-        "max": lambda x: max(x),
-        "min": lambda x: min(x),
-    }.items():
-        write_episode_summary(
-            writer, accumulate_summaries(summaries, accumulator), index, name
-        )
-
-
 def main(config_name: str):
     yparams = YParams("config.yaml", config_name)
     config = yparams.hparams
     run_name = f'{datetime.now().strftime("%Y-%m-%d_%H:%M:%S")}_{config_name}'
 
-    writer = SummaryWriter(path.join(config["path"], run_name))
-    write_hparams(writer=writer, yparams=yparams)
+    logger = Logger(SummaryWriter(path.join(config["path"], run_name)))
+    logger.write_hparams(yparams=yparams)
 
     batch_count = (
         config["train"]["samples_per_iteration"] // config["train"]["batch_size"]
@@ -181,8 +155,9 @@ def main(config_name: str):
     )
 
     generator = Generator(env, ranked_reward_buffer)
+    factory: EpisodeFactory
     if config["train"]["n_processes"] > 1:
-        factory = EpisodeFactory(generator)
+        factory = MultiProcessEpisodeFactory(generator)
     else:
         factory = SingleProcessEpisodeFactory(generator)
 
@@ -209,38 +184,24 @@ def main(config_name: str):
 
         summaries = []
         for episode_index, e in enumerate(episodes):
-            assert len(episodes) < batch_count, "the tensorboard indices make no sense"
             observations, pis, total_reward, summary = e
             for j, pi in enumerate(pis):
                 sample = (observations[j], pi, total_reward)
                 replay_buffer.push(sample)
             summaries.append(summary)
 
-        write_episode_summaries(writer, summaries, i * batch_count)
+        logger.write_episode_summaries(summaries, i * batch_count)
 
         if i > 0 and i % 3 == 0 and config["visualize_iterations"]:
-            # Visualization Process outputting a video for each iteration
-            p = Process(
-                target=generator.perform_episode,
-                args=(
-                    config["mcts"]["samples"],
-                    config["mcts"]["temp"],
-                    config["mcts"]["cpuct"],
-                    config["mcts"]["observation_weight"],
-                    deepcopy(model),
-                    True,
-                    i,
-                    run_name,
-                ),
+            create_video_images(
+                generator=generator, config=config, model=model, i=i, run_name=run_name
             )
-            p.start()
 
         # TRAIN model
         logs = train(
             model, replay_buffer, ranked_reward_buffer, i * batch_count, config
         )
-        for log in logs:
-            writer.add_scalar(*log)
+        logger.log_train(logs)
 
 
 if __name__ == "__main__":

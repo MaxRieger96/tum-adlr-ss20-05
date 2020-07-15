@@ -10,7 +10,7 @@ default: &DEFAULT
     size: 30000
   train:
     iterations: 100
-    episodes: 10
+    episodes: 8
     samples_per_iteration: 2048
     lr: 0.001 #1e-3
     weight_decay: 0.0001 #1e-4
