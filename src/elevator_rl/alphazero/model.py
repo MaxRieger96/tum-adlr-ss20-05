@@ -219,6 +219,7 @@ def train(
 
         policy_loss = (
             torch.sum(-pi_vec * torch.log(pred_p + 1e-8))
+            / pi_vec.shape[0]
             * config["train"]["policy_loss_factor"]
         )
         value_loss = mse_loss(pred_v, z_vec) * config["train"]["value_loss_factor"]
