@@ -4,6 +4,7 @@ default: &DEFAULT
   save_iterations: False
   pretrained_path: ""
   offline_training: False
+  pure_mcts: False
   mcts: &DEFAULT_MCTS
     samples: 50
     temp: 1.0
@@ -44,6 +45,9 @@ many_samples:
   mcts:
     samples: 3000
 
+default_pure_MCTS:
+  <<: *DEFAULT
+  pure_mcts: True
 
 10stores_mctsuniform:
   <<: *DEFAULT

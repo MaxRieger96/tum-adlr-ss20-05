@@ -21,6 +21,7 @@ from elevator_rl.alphazero.sample_generator import Generator
 from elevator_rl.alphazero.sample_generator import MultiProcessEpisodeFactory
 from elevator_rl.alphazero.sample_generator import SingleProcessEpisodeFactory
 from elevator_rl.alphazero.tensorboard import Logger
+from elevator_rl.baseline.uniform_model import UniformModel
 from elevator_rl.environment.elevator import ElevatorActionEnum
 from elevator_rl.environment.elevator_env import ElevatorEnv
 from elevator_rl.environment.example_houses import produce_house
@@ -29,22 +30,33 @@ from elevator_rl.yparams import YParams
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
-def create_video_images(
+def evaluation_process(
     generator: Generator, config: Dict, model: Model, i: int, run_name: str
 ):
     # Visualization Process outputting a video for each iteration
+    mcts_temp = 0
+    observations, pis, total_reward, summary = generator.perform_episode(
+        config["mcts"]["samples"],
+        mcts_temp,
+        config["mcts"]["cpuct"],
+        config["mcts"]["observation_weight"],
+        deepcopy(model),
+        True,
+        i,
+        run_name,
+    )
+    batch_count = (
+        config["train"]["samples_per_iteration"] // config["train"]["batch_size"]
+    )
+    logger = Logger(SummaryWriter(path.join(config["path"], run_name)))
+    logger.log_summary(summary, i * batch_count, "eval")
+
+
+def create_eval_process(
+    generator: Generator, config: Dict, model: Model, i: int, run_name: str
+):
     p = Process(
-        target=generator.perform_episode,
-        args=(
-            config["mcts"]["samples"],
-            config["mcts"]["temp"],
-            config["mcts"]["cpuct"],
-            config["mcts"]["observation_weight"],
-            deepcopy(model),
-            True,
-            i,
-            run_name,
-        ),
+        target=evaluation_process, args=(generator, config, model, i, run_name),
     )
     p.start()
 
@@ -165,11 +177,14 @@ def learning_loop(
     else:
         factory = SingleProcessEpisodeFactory(generator)
 
-    model = NNModel(
-        house_observation_dims=env.get_observation().as_array()[0].shape[0],
-        elevator_observation_dims=env.get_observation().as_array()[1].shape[0],
-        policy_dims=ElevatorActionEnum.count(),
-    )
+    if config["pure_mcts"]:
+        model = UniformModel()
+    else:
+        model = NNModel(
+            house_observation_dims=env.get_observation().as_array()[0].shape[0],
+            elevator_observation_dims=env.get_observation().as_array()[1].shape[0],
+            policy_dims=ElevatorActionEnum.count(),
+        )
 
     if config["pretrained_path"]:
         checkpoint = torch.load(config["pretrained_path"])
@@ -213,8 +228,8 @@ def learning_loop(
             if i > 0 and i % 3 == 0:
                 logger.plot_summaries(False, i)
 
-            if i > 0 and i % 3 == 0 and config["visualize_iterations"]:
-                create_video_images(
+            if i > 0 and i % 10 == 0 and config["visualize_iterations"]:
+                create_eval_process(
                     generator=generator,
                     config=config,
                     model=model,
@@ -223,22 +238,23 @@ def learning_loop(
                 )
 
         # TRAIN model
-        logs = train(
-            model, replay_buffer, ranked_reward_buffer, i * batch_count, config
-        )
-        logger.log_train(logs)
-
-        if config["save_iterations"]:
-            torch.save(
-                {
-                    "environment": env,
-                    "iteration_start": i + 1,
-                    "model_state_dict": model.state_dict(),
-                    "replay_buffer": replay_buffer,
-                    "ranked_reward_buffer": ranked_reward_buffer,
-                },
-                path.join(config["path"], run_name, f"model_save_{i}.pth"),
+        if not config["pure_mcts"]:
+            logs = train(
+                model, replay_buffer, ranked_reward_buffer, i * batch_count, config
             )
+            logger.log_train(logs)
+
+            if config["save_iterations"]:
+                torch.save(
+                    {
+                        "environment": env,
+                        "iteration_start": i + 1,
+                        "model_state_dict": model.state_dict(),
+                        "replay_buffer": replay_buffer,
+                        "ranked_reward_buffer": ranked_reward_buffer,
+                    },
+                    path.join(config["path"], run_name, f"model_save_{i}.pth"),
+                )
 
 
 def main(config_name: str):
