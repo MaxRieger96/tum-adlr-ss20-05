@@ -20,10 +20,10 @@ class Observation:
 
         # instead of waiting since, use waiting time
         self.down_requests_waiting_time: np.ndarray = (
-            house.time - house.down_requests_waiting_since * house.down_requests
+            (house.time - house.down_requests_waiting_since) * house.down_requests
         ).astype(np.float32)
         self.up_requests_waiting_time: np.ndarray = (
-            house.time - house.up_requests_waiting_since * house.up_requests
+            (house.time - house.up_requests_waiting_since) * house.up_requests
         ).astype(np.float32)
 
         # single vectors for all elevators

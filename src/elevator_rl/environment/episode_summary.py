@@ -113,6 +113,8 @@ def get_summary(env: "ElevatorEnv") -> Summary:
     :return: nr_passengers_transported, nr_passengers_waiting
     """
     nr_transported = len(env.transported_passenger_times)
+    nr_waiting = env.house.get_expected_passenger_count(env.house.time)
+    total_passengers = nr_transported + nr_waiting
 
     if nr_transported > 0:
         avg_waiting_time_transported = (
@@ -121,19 +123,19 @@ def get_summary(env: "ElevatorEnv") -> Summary:
     else:
         avg_waiting_time_transported = 0
 
-    total_passengers = len(
-        env.transported_passenger_times
-    ) + env.house.get_expected_passenger_count(env.house.time)
-
     still_waiting_waiting_times = (
         env.house.get_waiting_time_for_all_waiting_passengers()
     )
 
-    avg_waiting_time_per_person = (
-        avg_waiting_time_transported * nr_transported + sum(still_waiting_waiting_times)
-    ) / total_passengers
-
-    nr_waiting = env.house.get_expected_passenger_count(env.house.time)
+    if total_passengers > 0:
+        avg_waiting_time_per_person = (
+            avg_waiting_time_transported * nr_transported
+            + sum(still_waiting_waiting_times)
+        ) / total_passengers
+        percent_transported = nr_transported / total_passengers
+    else:
+        avg_waiting_time_per_person = 0
+        percent_transported = 0
 
     return Summary(
         nr_passengers_transported=nr_transported,
@@ -144,7 +146,7 @@ def get_summary(env: "ElevatorEnv") -> Summary:
         accumulated_reward=env.reward_acc,
         quadratic_waiting_time=env.get_quadratic_total_waiting_time(),
         waiting_time=env.get_total_waiting_time(),
-        percent_transported=nr_transported / (nr_transported + nr_waiting),
+        percent_transported=percent_transported,
     )
 
 

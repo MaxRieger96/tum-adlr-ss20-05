@@ -203,6 +203,8 @@ def main(config_name: str):
                 summaries.append(summary)
 
             logger.write_episode_summaries(summaries, i * batch_count)
+            if i > 0 and i % 3 == 0:
+                logger.plot_summaries(False, i)
 
             if i > 0 and i % 3 == 0 and config["visualize_iterations"]:
                 create_video_images(
