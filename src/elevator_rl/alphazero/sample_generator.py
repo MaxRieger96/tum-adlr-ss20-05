@@ -60,6 +60,8 @@ class Generator:
         pis = []
         observations = [current_env.get_observation().as_array()]
         total_reward = 0
+
+        has_seen_first_request = False
         while not current_env.is_end_of_day():
             mcts = MCTS(
                 mcts_samples,
@@ -72,15 +74,27 @@ class Generator:
             probs = mcts.get_action_probabilities(current_env, mcts_temp)
             probs = np.array(probs, dtype=np.float32)
 
-            pis.append(probs)
-
-            probs = torch.from_numpy(probs)
+            probs_t = torch.from_numpy(probs)
             prev_time = current_env.house.time
-            action = ElevatorActionEnum(self.sample_action(probs))
+            action = ElevatorActionEnum(self.sample_action(probs_t))
+
             env_action = ElevatorEnvAction(current_env.next_elevator, action)
             obs, reward = current_env.step(env_action)
-            observations.append(obs.as_array())
-            total_reward += reward
+
+            # only store samples after the first request occurs to avoid filling buffer
+            #  with chunk
+            if not has_seen_first_request:
+                has_seen_first_request = (
+                    np.any(current_env.house.up_requests)
+                    or np.any(current_env.house.down_requests)
+                    or any(
+                        np.any(e.floor_requests) for e in current_env.house.elevators
+                    )
+                )
+            if has_seen_first_request:
+                pis.append(probs)
+                observations.append(obs.as_array())
+                total_reward += reward
 
             if render:
                 root_dir = os.path.dirname(os.path.abspath(__file__))
