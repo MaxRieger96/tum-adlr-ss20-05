@@ -1,5 +1,6 @@
 from abc import ABC
 from abc import abstractmethod
+from typing import Dict
 from typing import Tuple
 
 import numpy as np
@@ -9,8 +10,12 @@ from torch import Tensor
 from torch.nn import BatchNorm1d
 from torch.nn import Linear
 from torch.nn import Module
+from torch.nn.functional import mse_loss
 from torch.nn.functional import softmax
+from torch.optim import Adam
 
+from elevator_rl.alphazero.ranked_reward import RankedRewardBuffer
+from elevator_rl.alphazero.replay_buffer import ReplayBuffer
 from elevator_rl.environment.elevator_env import ElevatorEnv
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -153,3 +158,83 @@ class NNModel(Module, Model):
         value = self.value_output_l1(combined_state)
         value = torch.tanh(value)
         return policy, value
+
+
+def train(
+    model: NNModel,
+    replay_buffer: ReplayBuffer,
+    ranked_reward_buffer: RankedRewardBuffer,
+    offset: int,
+    config: Dict,
+):
+    optimizer = Adam(
+        model.parameters(),
+        lr=config["train"]["lr"],
+        weight_decay=config["train"]["weight_decay"],
+    )
+    batch_count = (
+        config["train"]["samples_per_iteration"] // config["train"]["batch_size"]
+    )
+    model.to(device)
+    model.train()
+    acc_loss_value = []
+    acc_loss_policy = []
+    logs = []
+    for i in range(batch_count):
+        samples = replay_buffer.sample(config["train"]["batch_size"])
+
+        obs_vec = []
+        pi_vec = []
+        z_vec = []
+
+        for sample in samples:
+            obs, pi, total_reward = sample
+            obs_vec.append(obs)
+            pi_vec.append(pi)
+            if config["ranked_reward"]["update_rank"]:
+                assert (
+                    ranked_reward_buffer is not None
+                ), "rank can only be updated when ranked reward is used"
+                z_vec.append(ranked_reward_buffer.get_ranked_reward(total_reward))
+            else:
+                z_vec.append(total_reward)
+
+        obs_vec = (
+            np.array([x[0] for x in obs_vec], dtype=np.float32),
+            np.array([x[1] for x in obs_vec], dtype=np.float32),
+            np.array([x[2] for x in obs_vec], dtype=np.float32),
+        )
+
+        pi_vec = np.array(pi_vec, dtype=np.float32)
+        z_vec = np.array(z_vec, dtype=np.float32)
+        z_vec = np.expand_dims(z_vec, 1)
+
+        obs_vec = tuple(
+            torch.from_numpy(x).to(device).to(torch.float32) for x in obs_vec
+        )
+        pi_vec = torch.from_numpy(pi_vec).to(device)
+        z_vec = torch.from_numpy(z_vec).to(device)
+
+        pred_p, pred_v = model(*obs_vec)
+
+        policy_loss = (
+            torch.sum(-pi_vec * torch.log(pred_p + 1e-8))
+            * config["train"]["policy_loss_factor"]
+        )
+        value_loss = mse_loss(pred_v, z_vec) * config["train"]["value_loss_factor"]
+
+        loss = value_loss + policy_loss
+        acc_loss_value.append(value_loss.cpu().detach().data.tolist())
+        acc_loss_policy.append(policy_loss.cpu().detach().data.tolist())
+
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+
+    for i, loss in enumerate(acc_loss_value):
+        logs.append(("value loss", loss, i + offset))
+
+    for i, loss in enumerate(acc_loss_policy):
+        logs.append(("policy loss", loss, i + offset))
+
+    return logs
