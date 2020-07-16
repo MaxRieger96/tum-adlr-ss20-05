@@ -15,7 +15,7 @@ def fill_with_random_values(config: Dict):
     config["replay_buffer"]["size"] = choice([1000, 10000]) * randint(1, 10)
     config["train"]["weight_decay"] = choice([1e-5, 1e-4, 1e-3]) * uniform(0, 10)
     config["train"]["lr"] = choice([1e-5, 1e-4, 1e-3]) * uniform(0, 10)
-    config["train"]["batch_size"] = 2 ** randint(3, 10)  # 8 - 1024
+    config["train"]["batch_size"] = 2 ** randint(3, 6)  # 8 - 64
     config["train"]["samples_per_iteration"] = 2 ** randint(7, 13)  # 128 - 8192
     config["ranked_reward"]["update_rank"] = choice([True, False])
 
