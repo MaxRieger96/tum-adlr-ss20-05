@@ -14,8 +14,8 @@ def fill_with_random_values(config: Dict):
     config["train"]["episodes"] = choice([8, 16, 32, 64])
     config["replay_buffer"]["size"] = choice([1000, 10000]) * randint(1, 10)
     config["train"]["weight_decay"] = choice([1e-5, 1e-4, 1e-3]) * uniform(0, 10)
-    config["train"]["lr"] = choice([1e-5, 1e-4, 1e-3]) * uniform(0, 10)
-    config["train"]["batch_size"] = 2 ** randint(3, 6)  # 8 - 64
+    config["train"]["lr"] = choice([1e-5, 1e-4, 1e-3, 1e-2]) * uniform(0, 10)
+    config["train"]["batch_size"] = 2 ** randint(5, 7)  # 32 - 128
     config["train"]["samples_per_iteration"] = 2 ** randint(7, 13)  # 128 - 8192
     config["ranked_reward"]["update_rank"] = choice([True, False])
 
@@ -40,7 +40,7 @@ def main():
             f'{config["train"]["weight_decay"]:.1e}Dec'
         )
         print(run_name)
-        learning_loop(config, run_name, yparams, timedelta(hours=3))
+        learning_loop(config, run_name, yparams, timedelta(hours=2))
 
 
 if __name__ == "__main__":

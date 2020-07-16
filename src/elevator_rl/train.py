@@ -50,7 +50,7 @@ def learning_loop(
     )
 
     env = ElevatorEnv(house)
-    env.render(method="matplotlib")
+    # env.render(method="matplotlib")
 
     replay_buffer = ReplayBuffer(capacity=config["replay_buffer"]["size"])
     ranked_reward_buffer = RankedRewardBuffer(
@@ -115,7 +115,7 @@ def learning_loop(
             if i > 0 and i % 3 == 0:
                 logger.plot_summaries(False, i)
 
-            if i > 0 and i % 10 == 0:
+            if i > 0 and i % 10 == 0 and False:  # FIXME
                 p = Process(
                     target=evaluation_process,
                     args=(generator, config, model, i, run_name, eval_logging_process),
