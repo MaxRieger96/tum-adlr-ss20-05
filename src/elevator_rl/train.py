@@ -1,19 +1,15 @@
 import os
-from copy import deepcopy
 from datetime import datetime
 from datetime import timedelta
 from os import path
 from typing import Dict
 
-import numpy as np
 import torch
 from torch.multiprocessing import Process
-from torch.nn.functional import mse_loss
-from torch.optim import Adam
 from torch.utils.tensorboard import SummaryWriter
 
-from elevator_rl.alphazero.model import Model
 from elevator_rl.alphazero.model import NNModel
+from elevator_rl.alphazero.model import train
 from elevator_rl.alphazero.ranked_reward import RankedRewardBuffer
 from elevator_rl.alphazero.replay_buffer import ReplayBuffer
 from elevator_rl.alphazero.sample_generator import EpisodeFactory
@@ -25,120 +21,11 @@ from elevator_rl.baseline.uniform_model import UniformModel
 from elevator_rl.environment.elevator import ElevatorActionEnum
 from elevator_rl.environment.elevator_env import ElevatorEnv
 from elevator_rl.environment.example_houses import produce_house
+from elevator_rl.evaluation_logging_process import evaluation_process
+from elevator_rl.evaluation_logging_process import EvaluationLoggingProcess
 from elevator_rl.yparams import YParams
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-
-def evaluation_process(
-    generator: Generator, config: Dict, model: Model, i: int, run_name: str
-):
-    # Visualization Process outputting a video for each iteration
-    mcts_temp = 0
-    observations, pis, total_reward, summary = generator.perform_episode(
-        config["mcts"]["samples"],
-        mcts_temp,
-        config["mcts"]["cpuct"],
-        config["mcts"]["observation_weight"],
-        deepcopy(model),
-        True,
-        i,
-        run_name,
-    )
-    batch_count = (
-        config["train"]["samples_per_iteration"] // config["train"]["batch_size"]
-    )
-    logger = Logger(SummaryWriter(path.join(config["path"], run_name)))
-    logger.log_summary(summary, i * batch_count, "eval")
-
-
-def create_eval_process(
-    generator: Generator, config: Dict, model: Model, i: int, run_name: str
-):
-    p = Process(
-        target=evaluation_process, args=(generator, config, model, i, run_name),
-    )
-    p.start()
-
-
-def train(
-    model: NNModel,
-    replay_buffer: ReplayBuffer,
-    ranked_reward_buffer: RankedRewardBuffer,
-    offset: int,
-    config: Dict,
-):
-    optimizer = Adam(
-        model.parameters(),
-        lr=config["train"]["lr"],
-        weight_decay=config["train"]["weight_decay"],
-    )
-    batch_count = (
-        config["train"]["samples_per_iteration"] // config["train"]["batch_size"]
-    )
-    model.to(device)
-    model.train()
-    acc_loss_value = []
-    acc_loss_policy = []
-    logs = []
-    for i in range(batch_count):
-        samples = replay_buffer.sample(config["train"]["batch_size"])
-
-        obs_vec = []
-        pi_vec = []
-        z_vec = []
-
-        for sample in samples:
-            obs, pi, total_reward = sample
-            obs_vec.append(obs)
-            pi_vec.append(pi)
-            if config["ranked_reward"]["update_rank"]:
-                assert (
-                    ranked_reward_buffer is not None
-                ), "rank can only be updated when ranked reward is used"
-                z_vec.append(ranked_reward_buffer.get_ranked_reward(total_reward))
-            else:
-                z_vec.append(total_reward)
-
-        obs_vec = (
-            np.array([x[0] for x in obs_vec], dtype=np.float32),
-            np.array([x[1] for x in obs_vec], dtype=np.float32),
-            np.array([x[2] for x in obs_vec], dtype=np.float32),
-        )
-
-        pi_vec = np.array(pi_vec, dtype=np.float32)
-        z_vec = np.array(z_vec, dtype=np.float32)
-        z_vec = np.expand_dims(z_vec, 1)
-
-        obs_vec = tuple(
-            torch.from_numpy(x).to(device).to(torch.float32) for x in obs_vec
-        )
-        pi_vec = torch.from_numpy(pi_vec).to(device)
-        z_vec = torch.from_numpy(z_vec).to(device)
-
-        pred_p, pred_v = model(*obs_vec)
-
-        policy_loss = (
-            torch.sum(-pi_vec * torch.log(pred_p + 1e-8))
-            * config["train"]["policy_loss_factor"]
-        )
-        value_loss = mse_loss(pred_v, z_vec) * config["train"]["value_loss_factor"]
-
-        loss = value_loss + policy_loss
-        acc_loss_value.append(value_loss.cpu().detach().data.tolist())
-        acc_loss_policy.append(policy_loss.cpu().detach().data.tolist())
-
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
-
-    for i, loss in enumerate(acc_loss_value):
-        logs.append(("value loss", loss, i + offset))
-
-    for i, loss in enumerate(acc_loss_policy):
-        logs.append(("policy loss", loss, i + offset))
-
-    return logs
 
 
 def learning_loop(
@@ -151,6 +38,7 @@ def learning_loop(
 
     logger = Logger(SummaryWriter(path.join(config["path"], run_name)))
     logger.write_hparams(yparams=yparams)
+    eval_logging_process = EvaluationLoggingProcess(config, run_name)
 
     batch_count = (
         config["train"]["samples_per_iteration"] // config["train"]["batch_size"]
@@ -197,7 +85,6 @@ def learning_loop(
         iteration_start = 0
 
     for i in range(iteration_start, config["train"]["iterations"]):
-
         # stop after timeout
         if datetime.now() - start_time > time_out:
             print(f"stopping because of timeout after {time_out}")
@@ -228,14 +115,12 @@ def learning_loop(
             if i > 0 and i % 3 == 0:
                 logger.plot_summaries(False, i)
 
-            if i > 0 and i % 10 == 0 and config["visualize_iterations"]:
-                create_eval_process(
-                    generator=generator,
-                    config=config,
-                    model=model,
-                    i=i,
-                    run_name=run_name,
+            if i > 0 and i % 10 == 0:
+                p = Process(
+                    target=evaluation_process,
+                    args=(generator, config, model, i, run_name, eval_logging_process),
                 )
+                p.start()
 
         # TRAIN model
         if not config["pure_mcts"]:
