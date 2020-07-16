@@ -1,6 +1,7 @@
 import os
 from copy import deepcopy
 from datetime import datetime
+from datetime import timedelta
 from os import path
 from typing import Dict
 
@@ -128,13 +129,13 @@ def train(
     return logs
 
 
-def main(config_name: str):
-    yparams = YParams("config.yaml", config_name)
-    config = yparams.hparams
-    run_name = f'{datetime.now().strftime("%Y-%m-%d_%H:%M:%S")}_{config_name}'
-    assert not (
-        config["offline_training"] and not config["pretrained_path"]
-    ), "Offline training requires pretrained buffer"
+def learning_loop(
+    config: Dict,
+    run_name: str,
+    yparams: YParams,
+    time_out: timedelta = timedelta(hours=24),
+):
+    start_time = datetime.now()
 
     logger = Logger(SummaryWriter(path.join(config["path"], run_name)))
     logger.write_hparams(yparams=yparams)
@@ -181,6 +182,12 @@ def main(config_name: str):
         iteration_start = 0
 
     for i in range(iteration_start, config["train"]["iterations"]):
+
+        # stop after timeout
+        if datetime.now() - start_time > time_out:
+            print(f"stopping because of timeout after {time_out}")
+            break
+
         print(f"\niteration {i}")
         if not config["offline_training"]:
             print(f"\niteration {i}: sampling started")
@@ -232,6 +239,16 @@ def main(config_name: str):
                 },
                 path.join(config["path"], run_name, f"model_save_{i}.pth"),
             )
+
+
+def main(config_name: str):
+    yparams = YParams("config.yaml", config_name)
+    config = yparams.hparams
+    run_name = f'{datetime.now().strftime("%Y-%m-%d_%H:%M:%S")}_{config_name}'
+    assert not (
+        config["offline_training"] and not config["pretrained_path"]
+    ), "Offline training requires pretrained buffer"
+    learning_loop(config, run_name, yparams)
 
 
 if __name__ == "__main__":

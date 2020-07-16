@@ -1,5 +1,7 @@
-import numpy as np
 import os
+from pathlib import Path
+
+import numpy as np
 import torch
 from torch.distributions import Categorical
 from torch.utils.tensorboard import SummaryWriter
@@ -8,8 +10,7 @@ from elevator_rl.alphazero.tensorboard import Logger
 from elevator_rl.environment.elevator import ElevatorEnvAction
 from elevator_rl.environment.elevator_env import ElevatorActionEnum
 from elevator_rl.environment.elevator_env import ElevatorEnv
-from pathlib import Path
-from elevator_rl.environment.example_houses import get_10_story_single_elev_house, get_simple_house
+from elevator_rl.environment.example_houses import get_simple_house
 from elevator_rl.yparams import YParams
 
 
@@ -35,12 +36,13 @@ class RandomPolicy:
 
 def main(render: bool):
     from os import path
+
     run_name = "simple_house_random_policy"
     logger = Logger(SummaryWriter(path.join("../../../runs", run_name)))
     yparams = YParams("../config.yaml", "default")
     config = yparams.hparams
     batch_count = (
-            config["train"]["samples_per_iteration"] // config["train"]["batch_size"]
+        config["train"]["samples_per_iteration"] // config["train"]["batch_size"]
     )
     for i in range(config["train"]["iterations"]):
         summaries = []
@@ -63,12 +65,12 @@ def main(render: bool):
                     root_dir = os.path.dirname(os.path.abspath(__file__))
                     path = os.path.join(
                         root_dir,
-                        "{}/../plots/run_{}/iteration{}".format(
-                            root_dir, run_name, i
-                        ),
+                        "{}/../plots/run_{}/iteration{}".format(root_dir, run_name, i),
                     )
                     Path(path).mkdir(parents=True, exist_ok=True)
-                    env.render(method="file", path=path, prev_time=prev_time, action=action)
+                    env.render(
+                        method="file", path=path, prev_time=prev_time, action=action
+                    )
 
             # print("Total reward at the end of day: {}".format(env.reward_acc))
             print(env.get_summary())
