@@ -75,3 +75,18 @@ default_pure_MCTS:
     <<: *DEFAULT_HOUSE
     number_of_floors: 10
     elevator_capacity: 20
+
+optimized_params:
+  <<: *DEFAULT
+  mcts:
+    <<: *DEFAULT_MCTS
+    samples: 40
+  train:
+    <<: *DEFAULT_TRAIN
+    episodes: 16
+    samples_per_iteration: 4096
+    lr: 0.001 #1e-3
+    weight_decay: 0.0001 #1e-4
+    batch_size: 128
+  replay_buffer:
+    size: 7000
