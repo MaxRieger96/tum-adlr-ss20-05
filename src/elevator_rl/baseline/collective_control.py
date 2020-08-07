@@ -25,6 +25,11 @@ class CollectiveControl:
     def get_action(self, env: ElevatorEnv):
         elevator = env.house.elevators[env.next_elevator]
 
+        if elevator.floor == 0:
+            self.elevators_latest_direction[env.next_elevator] = ElevatorActionEnum.UP
+        elif elevator.floor == env.house.number_of_floors - 1:
+            self.elevators_latest_direction[env.next_elevator] = ElevatorActionEnum.DOWN
+
         # collect an answer all calls in one direction, then reverse and repeat
         if elevator.floor == env.house.number_of_floors - 1:
             floor_requests_above = []
@@ -42,7 +47,6 @@ class CollectiveControl:
         house_requests_below = np.any(
             env.house.up_requests[: elevator.floor]
         ) or np.any(env.house.down_requests[: elevator.floor])
-
         if floor_requests_current:  # Passengers want to leave
             return ElevatorActionEnum.OPEN
         elif env.house.up_requests[elevator.floor] and self.latest_direction_is(
@@ -87,7 +91,7 @@ class CollectiveControl:
 def main(render: bool):
     from os import path
 
-    run_name = "simple_house_collective_control"
+    run_name = "simple_house_cc"
     logger = Logger(SummaryWriter(path.join("../../../runs", run_name)))
     yparams = YParams("../config.yaml", "default")
     config = yparams.hparams
