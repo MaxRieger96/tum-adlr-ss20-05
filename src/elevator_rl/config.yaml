@@ -50,47 +50,6 @@ debugging_default:
     batch_size: 4
     n_processes: 4
 
-without_early_reward:
-  <<: *DEFAULT
-  mcts:
-    <<: *DEFAULT_MCTS
-    observation_weight: 0
-
-2elev_3floor:
-  <<: *DEFAULT
-  house:
-    <<: *DEFAULT_HOUSE
-    number_of_elevators: 2
-    number_of_floors: 3
-
-1elev_5floor:
-  <<: *DEFAULT
-  house:
-    <<: *DEFAULT_HOUSE
-    number_of_elevators: 1
-    number_of_floors: 5
-
-2elev_5floor:
-  <<: *DEFAULT
-  house:
-    <<: *DEFAULT_HOUSE
-    number_of_elevators: 2
-    number_of_floors: 5
-
-1elev_7floor:
-  <<: *DEFAULT
-  house:
-    <<: *DEFAULT_HOUSE
-    number_of_elevators: 1
-    number_of_floors: 7
-
-2elev_7floor:
-  <<: *DEFAULT
-  house:
-    <<: *DEFAULT_HOUSE
-    number_of_elevators: 2
-    number_of_floors: 7
-
 save_model:
   <<: *DEFAULT
   save_iterations: True
@@ -136,9 +95,9 @@ default_pure_MCTS:
     number_of_floors: 10
     elevator_capacity: 20
 
-optimized_params:
+optimized_params: &OPTIMIZED
   <<: *DEFAULT
-  mcts:
+  mcts: &OPTIMIZED_MCTS
     <<: *DEFAULT_MCTS
     samples: 40
   train:
@@ -150,3 +109,44 @@ optimized_params:
     batch_size: 128
   replay_buffer:
     size: 7000
+
+without_early_reward:
+  <<: *OPTIMIZED
+  mcts:
+    <<: *OPTIMIZED_MCTS
+    observation_weight: 0
+
+2elev_3floor:
+  <<: *OPTIMIZED
+  house:
+    <<: *DEFAULT_HOUSE
+    number_of_elevators: 2
+    number_of_floors: 3
+
+1elev_5floor:
+  <<: *OPTIMIZED
+  house:
+    <<: *DEFAULT_HOUSE
+    number_of_elevators: 1
+    number_of_floors: 5
+
+2elev_5floor:
+  <<: *OPTIMIZED
+  house:
+    <<: *DEFAULT_HOUSE
+    number_of_elevators: 2
+    number_of_floors: 5
+
+1elev_7floor:
+  <<: *OPTIMIZED
+  house:
+    <<: *DEFAULT_HOUSE
+    number_of_elevators: 1
+    number_of_floors: 7
+
+2elev_7floor:
+  <<: *OPTIMIZED
+  house:
+    <<: *DEFAULT_HOUSE
+    number_of_elevators: 2
+    number_of_floors: 7
