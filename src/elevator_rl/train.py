@@ -153,8 +153,10 @@ def main(config_name: str):
 
 
 if __name__ == "__main__":
-    loaded_config = (
+    config_name = (
         os.environ["CONFIG_NAME"] if "CONFIG_NAME" in os.environ else "default"
     )
+    loaded_config = config_name
+    print(f"loaded config {config_name}")
     print(loaded_config)
     main(config_name=loaded_config)

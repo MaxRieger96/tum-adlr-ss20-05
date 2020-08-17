@@ -73,6 +73,7 @@ class Elevator:
     ):
         assert len(self.passengers) <= self.capacity
         self.passengers = self.passengers | entering_passengers
+        assert len(self.passengers) <= self.capacity
         self.floor_requests[self.floor] = False
         self.floor_requests[new_floor_requests] = True
         # TODO set better estimates of time taken for entering and leaving
