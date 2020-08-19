@@ -21,7 +21,7 @@ default: &DEFAULT
     policy_loss_factor: 1.0
     value_loss_factor: 1.0
     batch_size: 32
-    n_processes: 8
+    n_processes: 6
   ranked_reward:
     size: 250
     threshold: 0.75
@@ -63,10 +63,6 @@ many_samples:
   <<: *DEFAULT
   mcts:
     samples: 3000
-
-default_pure_MCTS:
-  <<: *DEFAULT
-  pure_mcts: True
 
 10stores_mctsuniform:
   <<: *DEFAULT
@@ -110,6 +106,15 @@ optimized_params: &OPTIMIZED
   replay_buffer:
     size: 7000
 
+
+1elev_3floor_mcts:
+  <<: *OPTIMIZED
+  pure_mcts: True
+  house:
+    <<: *DEFAULT_HOUSE
+    number_of_elevators: 1
+    number_of_floors: 3
+
 without_early_reward:
   <<: *OPTIMIZED
   mcts:
@@ -136,6 +141,16 @@ without_early_reward:
     <<: *DEFAULT_HOUSE
     number_of_elevators: 2
     number_of_floors: 5
+
+2elev_3floor_alphazero:
+  <<: *OPTIMIZED
+  mcts:
+    <<: *OPTIMIZED_MCTS
+    observation_weight: 0
+  house:
+    <<: *DEFAULT_HOUSE
+    number_of_elevators: 2
+    number_of_floors: 3
 
 2elev_5floor_more_mcts:
   <<: *OPTIMIZED

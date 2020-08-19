@@ -10,7 +10,7 @@ from elevator_rl.alphazero.tensorboard import Logger
 from elevator_rl.environment.elevator import ElevatorEnvAction
 from elevator_rl.environment.elevator_env import ElevatorActionEnum
 from elevator_rl.environment.elevator_env import ElevatorEnv
-from elevator_rl.environment.example_houses import get_simple_house
+from elevator_rl.environment.example_houses import produce_house
 from elevator_rl.yparams import YParams
 
 
@@ -37,7 +37,8 @@ class RandomPolicy:
 def main(render: bool):
     from os import path
 
-    run_name = "simple_house_random_policy"
+    run_name = "rp_2elev_3floor"
+
     logger = Logger(SummaryWriter(path.join("../../../runs", run_name)))
     yparams = YParams("../config.yaml", "default")
     config = yparams.hparams
@@ -48,7 +49,10 @@ def main(render: bool):
         summaries = []
         for episode in range(config["train"]["episodes"]):
             print(i)
-            house = get_simple_house()
+            house = produce_house(
+                elevator_capacity=10, number_of_elevators=2, number_of_floors=3,
+            )
+            # house = get_simple_house()
 
             env = ElevatorEnv(house)
             random_policy = RandomPolicy()
