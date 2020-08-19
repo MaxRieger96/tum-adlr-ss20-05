@@ -137,6 +137,16 @@ without_early_reward:
     number_of_elevators: 2
     number_of_floors: 5
 
+2elev_5floor_more_mcts:
+  <<: *OPTIMIZED
+  house:
+    <<: *DEFAULT_HOUSE
+    number_of_elevators: 2
+    number_of_floors: 5
+  mcts:
+    <<: *OPTIMIZED_MCTS
+    samples: 100
+
 1elev_7floor:
   <<: *OPTIMIZED
   house:

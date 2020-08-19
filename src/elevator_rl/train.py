@@ -20,6 +20,7 @@ from elevator_rl.alphazero.tensorboard import Logger
 from elevator_rl.baseline.uniform_model import UniformModel
 from elevator_rl.environment.elevator import ElevatorActionEnum
 from elevator_rl.environment.elevator_env import ElevatorEnv
+from elevator_rl.environment.episode_summary import accumulate_summaries
 from elevator_rl.environment.example_houses import produce_house
 from elevator_rl.evaluation_logging_process import evaluation_process
 from elevator_rl.evaluation_logging_process import EvaluationLoggingProcess
@@ -28,12 +29,35 @@ from elevator_rl.yparams import YParams
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
+def save_model(
+    env: ElevatorEnv,
+    i: int,
+    model: NNModel,
+    replay_buffer: ReplayBuffer,
+    ranked_reward_buffer: RankedRewardBuffer,
+    config: Dict,
+    run_name: str,
+):
+    torch.save(
+        {
+            "environment": env,
+            "iteration_start": i + 1,
+            "model_state_dict": model.state_dict(),
+            "replay_buffer": replay_buffer,
+            "ranked_reward_buffer": ranked_reward_buffer,
+        },
+        path.join(config["path"], run_name, f"model_save_{i}.pth"),
+    )
+
+
 def learning_loop(
     config: Dict,
     run_name: str,
     yparams: YParams,
     time_out: timedelta = timedelta(hours=24),
 ):
+    best_waiting_time = None
+
     start_time = datetime.now()
 
     logger = Logger(SummaryWriter(path.join(config["path"], run_name)))
@@ -112,6 +136,16 @@ def learning_loop(
                 summaries.append(summary)
 
             logger.write_episode_summaries(summaries, i * batch_count)
+            waiting_time = accumulate_summaries(
+                summaries, lambda x: sum(x) / len(x)
+            ).avg_waiting_time_per_person
+
+            if best_waiting_time is None or waiting_time < best_waiting_time:
+                best_waiting_time = waiting_time
+                save_model(
+                    env, i, model, replay_buffer, ranked_reward_buffer, config, run_name
+                )
+
             if i > 0 and i % 3 == 0:
                 logger.plot_summaries(False, i)
 
@@ -130,15 +164,8 @@ def learning_loop(
             logger.log_train(logs)
 
             if config["save_iterations"]:
-                torch.save(
-                    {
-                        "environment": env,
-                        "iteration_start": i + 1,
-                        "model_state_dict": model.state_dict(),
-                        "replay_buffer": replay_buffer,
-                        "ranked_reward_buffer": ranked_reward_buffer,
-                    },
-                    path.join(config["path"], run_name, f"model_save_{i}.pth"),
+                save_model(
+                    env, i, model, replay_buffer, ranked_reward_buffer, config, run_name
                 )
 
 
