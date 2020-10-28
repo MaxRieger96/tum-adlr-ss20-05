@@ -1,9 +1,13 @@
 Observation Sensitive MCTS for Elevator Transportation
 ======================================================
 
-In this project, we try to adapt the AlphaZero algorithm to problems with continuous
-rewards. We chose the problem of elevator transportation to apply our version of the
-algorithm.
+We present a modification to the Monte-Carlo-TreeSearch (MCTS) approach used in AlphaZero, which incorporates
+observed rewards in every step. Thereby we extend the applicability of the AlphaZero algorithm to tasks with observed rewards
+at every step that feed directly into the final reward. We apply
+this algorithm to one representative of this class, the elevator
+transportation task, and show that our method is able to train
+successfully on this task. Our method reaches performance close
+to the collective-control heuristic.
 
 Project Structure
 -----------------
@@ -21,3 +25,17 @@ use the environment variable "CONFIG_NAME" to choose a configuration
 random policy, pure MCTS, and the heuristic collective control
 - If you want to play a little bit and control some elevators yourself you can run the
 [interactive environment](./src/elevator_rl/environment/interactive_env.py)
+
+
+
+Environment
+-----------
+We have implemented an elevator environment as visualized
+below, which resembles the real world scenario closely
+by only observing the passenger requests (up or down at a
+specific floor), requested floors for elevators and the total
+number of passengers in an elevator. Unobserved is e.g. how
+many people are waiting at floors with a passenger request and how many passengers want to leave at requested floors.
+To avoid those hidden states from leaking through the MCTS
+exploration we represent them stochastically in our state.
+![Image of an Example Environment](doc/environment_example.png)
